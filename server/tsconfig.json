@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "target": "es5",
+        "module": "commonjs",
+        "outDir": "./.build",
+        "sourceMap": true,
+        "noImplicitAny": true,
+        "lib": ["es2015", "dom"],
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "strict": true,
+        "esModuleInterop": true
+    }
+}

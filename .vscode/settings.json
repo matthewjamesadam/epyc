@@ -1,0 +1,12 @@
+{
+    "editor.formatOnSave": true,
+    "javascript.format.enable": false,
+    "files.exclude": {
+        "**/node_modules/**": true
+    },
+    "search.exclude": {
+        "**/node_modules/**": true
+    },
+    "taskExplorer.enableNpm": true,
+    "taskExplorer.enableTsc": false
+}

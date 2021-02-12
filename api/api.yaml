@@ -1,0 +1,208 @@
+openapi: '3.0.1'
+info:
+  description: 'epyc API'
+  version: 1.0.0
+  title: EPYC API
+  license:
+    name: Apache-2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+servers:
+  - url: 'https://epyc.phlegmatic.ca/api/'
+
+tags:
+  - name: epyc
+
+paths:
+  /games:
+    get:
+      tags:
+        - epyc
+      summary: ''
+      description: ''
+      operationId: getGames
+      parameters: []
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/definitions/Game'
+
+  /games/{gameName}:
+    get:
+      tags:
+        - epyc
+      summary: ''
+      description: ''
+      operationId: getGame
+      parameters:
+        - name: gameName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/definitions/Game'
+
+  /games/{gameName}/frame/{frameId}/playData:
+    get:
+      tags:
+        - epyc
+      summary: ''
+      description: ''
+      operationId: getFramePlayData
+      parameters:
+        - name: gameName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: frameId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/definitions/FramePlayData'
+
+  /games/{gameName}/frame/{frameId}/title:
+    put:
+      tags:
+        - epyc
+      summary: ''
+      description: ''
+      operationId: putFrameTitle
+      parameters:
+        - name: gameName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: frameId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/definitions/FramePlayTitleRequest'
+      responses:
+        '200':
+          description: successful operation
+
+  /games/{gameName}/frame/{frameId}/image:
+    put:
+      tags:
+        - epyc
+      summary: ''
+      description: ''
+      operationId: putFrameImage
+      parameters:
+        - name: gameName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: frameId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: successful operation
+
+components:
+  schemas:
+    Person:
+      title: Person
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    Frame:
+      title: Frame
+      type: object
+      properties:
+        person:
+          $ref: '#/definitions/Person'
+        playData:
+          $ref: '#/definitions/FramePlayData'
+      required:
+        - person
+        - playData
+
+    FrameImageData:
+      title: FrameImageData
+      type: object
+      properties:
+        imageUrl:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+      required:
+        - imageUrl
+        - width
+        - height
+
+    FramePlayData:
+      title: FramePlayData
+      type: object
+      properties:
+        title:
+          type: string
+        image:
+          $ref: '#/definitions/FrameImageData'
+      required: []
+
+    FramePlayTitleRequest:
+      title: FramePlayTitleRequest
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    Game:
+      title: Game
+      type: object
+      properties:
+        name:
+          type: string
+        frames:
+          type: array
+          items:
+            $ref: '#/definitions/Frame'
+      required:
+        - id
+        - name
+        - frames

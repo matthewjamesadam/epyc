@@ -1,0 +1,33 @@
+// @import 'bootstrap/scss/bootstrap';
+
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+
+@import 'node_modules/bootstrap/scss/reboot';
+@import 'node_modules/bootstrap/scss/type';
+@import 'node_modules/bootstrap/scss/grid';
+
+@import 'node_modules/bootstrap/scss/buttons';
+// @import 'node_modules/bootstrap/scss/nav';
+// @import 'node_modules/bootstrap/scss/navbar';
+
+@import 'node_modules/bootstrap/scss/popover';
+
+@import 'node_modules/bootstrap/scss/forms';
+@import 'node_modules/bootstrap/scss/card';
+@import 'node_modules/bootstrap/scss/alert';
+// @import 'node_modules/bootstrap/scss/list-group';
+@import 'node_modules/bootstrap/scss/spinners';
+
+@import 'node_modules/bootstrap/scss/button-group';
+
+.react-colorful__saturation {
+    border-radius: 0.23rem 0.23rem 0 0;
+    box-shadow: none;
+}
+
+.react-colorful__last-control {
+    border-radius: 0 0 0.23rem 0.23rem;
+}

@@ -1,0 +1,15 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /home/www/epyc
+
+hooks:
+  ApplicationStart:
+    - location: aws_start.sh
+      timeout: 300
+      runas: ec2-user
+
+  ApplicationStop:
+    - location: aws_stop.sh
+      runas: ec2-user

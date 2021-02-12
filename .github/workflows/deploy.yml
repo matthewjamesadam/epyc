@@ -1,0 +1,60 @@
+name: Deploy Server
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: '14.x' # set this to the node version to use
+  AWS_APP_NAME: 'epyc'
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build Server
+        shell: bash
+        run: |
+          cd server
+          npm install
+          npm run build
+
+      - name: Build Client
+        shell: bash
+        run: |
+          cd client
+          npm install
+          npm run build
+
+      - name: Package
+        shell: bash
+        run: |
+          cd server
+          npm prune --production
+          zip -r ../${{env.AWS_APP_NAME}}.zip .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ca-central-1
+
+      - name: Upload to S3
+        run: |
+          cd server
+          aws deploy push --application-name ${{ env.AWS_APP_NAME }} --s3-location s3://phlegmatic-deploy/${{env.AWS_APP_NAME}}.zip
+
+      - name: Deploy to EC2
+        run: |
+          aws deploy create-deployment --application-name ${{ env.AWS_APP_NAME }} --s3-location bucket=phlegmatic-deploy,key=${{ env.AWS_APP_NAME }}.zip,bundleType=zip --deployment-group-name ${{ env.AWS_APP_NAME }} --ignore-application-stop-failures
