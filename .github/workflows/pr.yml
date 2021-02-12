@@ -7,7 +7,7 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build
+    name: Build and Test
     runs-on: ubuntu-latest
     steps:
       - name: Check Out Code
