@@ -59,12 +59,8 @@ export class DiscordBot extends Bot {
     }
 
     protected async sendStringDM(person: PersonModel, content: string): Promise<void> {
-        try {
-            let discordPerson = await this.client.users.fetch(person.id);
-            discordPerson.send(content);
-        } catch (e) {
-            console.log(`Could not send frame message: ${e}`);
-        }
+        let discordPerson = await this.client.users.fetch(person.id);
+        discordPerson.send(content);
     }
 
     protected toBold(content: string): string {
