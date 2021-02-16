@@ -1,33 +1,14 @@
-import Discord, { Channel, TextChannel } from 'discord.js';
-import { BotTarget, ChannelModel, Db, FrameModel, GameModel, PersonModel } from './Db';
-import { ObjectId } from 'mongodb';
-import { v4 as uuid } from 'uuid';
+import Discord, { TextChannel } from 'discord.js';
+import { Bot } from './Bot';
+import { BotTarget, ChannelModel, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
 
-type MessageChannel = Discord.TextChannel | Discord.DMChannel | Discord.NewsChannel;
-
-const helpMessage = `🧑🏾‍🎨 **Eat Poop You Cat**
-
-🤖 Bot Commands:
-* \`@epyc start @person1 @person2 @person3 @person4\`: Start a new game in this channel
-* \`@epyc status\`: Show the status of all games in this channel
-
-👨🏿‍💻 Go to https://epyc.phlegmatic.ca to see old games!
-`;
-
-export interface IBot {
-    makeBold(label: string): string;
-    sendMessage(channel: ChannelModel, content: string): Promise<void>;
-    sendDM(person: PersonModel, content: string): Promise<void>;
-}
-
-export class DiscordBot implements IBot {
+export class DiscordBot extends Bot {
     client: Discord.Client;
-    gameManager: GameManagerProvider;
 
     constructor(gameManager: GameManagerProvider) {
+        super(gameManager);
         this.client = new Discord.Client();
-        this.gameManager = gameManager;
     }
 
     async init(): Promise<void> {
@@ -42,7 +23,7 @@ export class DiscordBot implements IBot {
 
         this.client.on('message', (message) => {
             if (message.mentions.users.has(this.client.user?.id || '')) {
-                this.processMessage(message);
+                this.processDiscordMessage(message);
             }
         });
 
@@ -56,70 +37,18 @@ export class DiscordBot implements IBot {
         return promise;
     }
 
-    processMessage(message: Discord.Message) {
-        let allItems = message.cleanContent.split(' ');
+    processDiscordMessage(message: Discord.Message) {
+        let channelName = message.channel.type === 'text' ? message.channel.name : '';
+        const channel = ChannelModel.create(message.channel.id, channelName, BotTarget.discord);
 
-        if (allItems.length < 2) {
-            return this.printIDunnoMessage(message.channel);
-        }
-
-        switch (allItems[1]) {
-            case 'help':
-                this.printHelpMessage(message.channel);
-                break;
-            case 'status':
-                this.printStatus(message.channel);
-                break;
-            case 'start':
-                this.startGame(message);
-                break;
-
-            default:
-                this.printIDunnoMessage(message.channel);
-                break;
-        }
-    }
-
-    printIDunnoMessage(channel: MessageChannel) {
-        channel.send('🧐 huh?  Try `@epyc help` for help.');
-    }
-
-    printHelpMessage(channel: MessageChannel) {
-        channel.send(helpMessage);
-    }
-
-    printStatus(channel: MessageChannel) {
-        channel.send('Oops, not implemented yet');
-    }
-
-    async startGame(message: Discord.Message) {
-        const channel = message.channel;
-
-        const channelModel = ChannelModel.create(channel.id, /* FIXME */ 'blah', BotTarget.discord);
-
-        // Collect people
-        const players: Array<PersonModel> = message.mentions.users
+        const mentions: Array<PersonModel> = message.mentions.users
             .filter((user) => user.id !== this.client.user?.id)
             .map((user) => PersonModel.create(user.id, user.username, BotTarget.discord));
 
-        // FIXME
-        while (players.length < 4) {
-            players.push(players[0]);
-        }
-
-        try {
-            await this.gameManager.gameManager.startGame(players, channelModel, BotTarget.discord);
-        } catch (error) {
-            channel.send('Could not create game.');
-            return;
-        }
+        this.processMessage(channel, message.cleanContent, mentions);
     }
 
-    makeBold(label: string): string {
-        return `**${label}**`;
-    }
-
-    async sendMessage(channel: ChannelModel, content: string) {
+    protected async sendStringMessage(channel: ChannelModel, content: string): Promise<void> {
         let discordChannel = await this.client.channels.fetch(channel.id);
         if (!discordChannel.isText) {
             throw new Error('Channel is not a text channel'); // Should never happen, really
@@ -129,12 +58,20 @@ export class DiscordBot implements IBot {
         (discordChannel as TextChannel).send(content);
     }
 
-    async sendDM(person: PersonModel, content: string): Promise<void> {
+    protected async sendStringDM(person: PersonModel, content: string): Promise<void> {
         try {
             let discordPerson = await this.client.users.fetch(person.id);
             discordPerson.send(content);
         } catch (e) {
             console.log(`Could not send frame message: ${e}`);
         }
+    }
+
+    protected toBold(content: string): string {
+        return `**${content}**`;
+    }
+
+    protected toBlock(content: string): string {
+        return `\`${content}\``;
     }
 }
