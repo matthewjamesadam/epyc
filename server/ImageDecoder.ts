@@ -17,8 +17,6 @@ export class ImageDecoder {
             });
 
             decodeStream.on('metadata', (png: PNG, buffer: Metadata) => {
-                const q = 5;
-
                 resolve({
                     // data: buffer,
                     width: png.width,
