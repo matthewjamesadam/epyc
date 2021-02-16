@@ -10,6 +10,7 @@ import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageDecoder } from './ImageDecoder';
 import Cfg from './Cfg';
+import { Message } from 'discord.js';
 
 // Cheap IOC container
 export class GameManagerProvider {
@@ -218,5 +219,30 @@ export class GameManager {
 
     private sendMessage(channel: ChannelModel, ...content: MessageContent) {
         this.getBotTarget(channel.target).sendMessage(channel, ...content);
+    }
+
+    async reportStatus(channel: ChannelModel): Promise<void> {
+        const query = {
+            isComplete: false,
+            'channel.id': channel.id,
+        };
+
+        const games = await this.db.getGames();
+
+        if (games.length === 0) {
+            this.sendMessage(channel, 'No games are in progress in this channel');
+            return;
+        }
+
+        const gameMessages: MessageContent = games.flatMap((game) => {
+            const nextFrame = game.frames.find((frame) => !frame.image && !frame.title);
+            if (!nextFrame) {
+                return []; // Should never happen
+            }
+
+            return ['\n', Bold(game.name), ': Waiting on ', Bold(nextFrame.person.name)];
+        });
+
+        this.sendMessage(channel, 'The following games are in progress:', ...gameMessages);
     }
 }

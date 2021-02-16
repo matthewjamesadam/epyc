@@ -94,8 +94,13 @@ export abstract class Bot {
             case 'help':
                 this.printHelpMessage(channel);
                 break;
+
             case 'start':
                 this.startGame(channel, mentions);
+                break;
+
+            case 'status':
+                this.gameManager.gameManager.reportStatus(channel);
                 break;
 
             default:

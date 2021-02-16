@@ -5,6 +5,7 @@ import * as MongoDb from 'mongodb';
 import { Constructor } from 'serialazy/lib/dist/types';
 import * as API from './api';
 import Cfg from './Cfg';
+import { FilterQuery } from 'mongodb';
 
 export enum BotTarget {
     discord = 'discord',
@@ -141,8 +142,8 @@ export class Db {
         await this.game.insertOne(doc);
     }
 
-    async getGames(): Promise<Array<GameModel>> {
-        let docs = await this.game.find().limit(50).toArray();
+    async getGames(query?: FilterQuery<any>): Promise<Array<GameModel>> {
+        let docs = await this.game.find(query).limit(50).toArray();
 
         let models = this.inflateArray(docs, GameModel);
         return models;
