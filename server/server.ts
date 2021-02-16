@@ -5,11 +5,7 @@ import { Configuration } from './api';
 import { Db } from './Db';
 import path from 'path';
 import expressStaticGzip from 'express-static-gzip';
-import passport from 'passport';
 import CookieParser from 'cookie-parser';
-import { Strategy as PassportJwtStrategy } from 'passport-jwt';
-import { Strategy as PassportLocalStrategy } from 'passport-local';
-import * as JWT from 'jsonwebtoken';
 import { DiscordBot } from './DiscordBot';
 import { GameManager, GameManagerProvider } from './GameManager';
 
@@ -26,26 +22,6 @@ let startDb = async () => {
 
     let db = Db.create();
     return db;
-};
-
-let startPassport = async (db: Db) => {
-    console.log('*** Starting Passport');
-
-    // passport.use('jwt', new PassportJwtStrategy({
-    //     secretOrKey: jwtKey,
-    //     jwtFromRequest: (req) => {
-    //         return req.cookies['epyc_jwt']
-    //     }},
-    //     (payload, done) => {
-    //         // Verify payload is valid
-    //         if (!payload) {
-    //             done(null, false);
-    //         }
-    //         done(payload, true);
-    //     }
-    // ));
-
-    // passport.use('local', new PassportLocalStrategy());
 };
 
 let startServer = async (db: Db, gameManagerProvider: GameManagerProvider) => {
@@ -103,7 +79,6 @@ let bootup = async () => {
 
         const db = await startDb();
         const discordBot = await startDiscord(gameManagerProvider);
-        await startPassport(db);
         await startServer(db, gameManagerProvider);
 
         gameManagerProvider._gameManager = new GameManager(db, discordBot);

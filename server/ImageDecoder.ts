@@ -1,4 +1,3 @@
-import { decode } from 'jsonwebtoken';
 import { Metadata, PNG } from 'pngjs';
 import { Readable } from 'stream';
 

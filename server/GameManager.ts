@@ -5,7 +5,7 @@ import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
 import { Db } from './Db';
 import { generateFakeWord } from 'fakelish';
-import { DiscordBot, IBot } from './DiscordBot';
+import { Bot, MessageContent, Bold } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageDecoder } from './ImageDecoder';
@@ -27,11 +27,11 @@ export class GameManagerProvider {
 export class GameManager {
     urlBase: string;
 
-    constructor(private db: Db, private discordBot: DiscordBot) {
+    constructor(private db: Db, private discordBot: Bot) {
         this.urlBase = Cfg.baseWebPath;
     }
 
-    async startGame(players: Array<PersonModel>, channel: ChannelModel, botTarget: BotTarget): Promise<void> {
+    async startGame(players: Array<PersonModel>, channel: ChannelModel): Promise<void> {
         // Collect people
         const frames: Array<FrameModel> = players.map((player) => FrameModel.create(uuid(), player));
 
@@ -61,7 +61,14 @@ export class GameManager {
 
         let firstPerson = frames[0].person;
 
-        this.sendMessage(channel, `Game **${game.name}** has begun!\nIt is now <@${firstPerson.id}>'s turn.`);
+        this.sendMessage(
+            channel,
+            `Game `,
+            Bold(game.name),
+            ` has begun!  It is now `,
+            Bold(firstPerson.name),
+            `'s turn.`
+        );
         this.sendFrameMessage(game, frames[0]);
     }
 
@@ -175,10 +182,7 @@ export class GameManager {
         if (frameIdx + 1 >= game.frames.length) {
             game.isComplete = true;
             await this.db.putGame(game);
-            await this.sendMessage(
-                game.channel,
-                `Game ${this.getBoldedGameName(game)} is done!  ${this.getGameUrl(game)}`
-            );
+            await this.sendMessage(game.channel, `Game `, Bold(game.name), ` is done!  ${this.getGameUrl(game)}`);
         }
 
         // Game's not over yet -- tell the next player
@@ -187,7 +191,11 @@ export class GameManager {
             await this.sendFrameMessage(game, nextFrame);
             await this.sendMessage(
                 game.channel,
-                `It is now <@${nextFrame.person.id}>'s turn for game ${this.getBoldedGameName(game)}.`
+                `It is now `,
+                Bold(nextFrame.person.name),
+                `'s turn for game `,
+                Bold(game.name),
+                `.`
             );
         }
     }
@@ -199,11 +207,7 @@ export class GameManager {
         );
     }
 
-    private getBoldedGameName(game: GameModel) {
-        return this.getBotTarget(game.channel.target).makeBold(game.name);
-    }
-
-    private getBotTarget(target: BotTarget): IBot {
+    private getBotTarget(target: BotTarget): Bot {
         switch (target) {
             case BotTarget.discord:
                 return this.discordBot;
@@ -212,7 +216,7 @@ export class GameManager {
         throw new Error('No valid bot!'); // FIXME
     }
 
-    private sendMessage(channel: ChannelModel, content: string) {
-        this.getBotTarget(channel.target).sendMessage(channel, content);
+    private sendMessage(channel: ChannelModel, ...content: MessageContent) {
+        this.getBotTarget(channel.target).sendMessage(channel, ...content);
     }
 }
