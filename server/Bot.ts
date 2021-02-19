@@ -36,12 +36,49 @@ export type MessageContent = MessageChunk[];
 const helpMessage: MessageContent = [
     `🧑🏾‍🎨 `,
     Bold('**Eat Poop You Cat**'),
-    `\n\n🤖 Bot Commands:\n* `,
+    `\n\n`,
+    `🤖 Bot Commands:\n`,
+    `* `,
     Block(`@epyc start @person1 @person2 @person3 @person4`),
-    `: Start a new game in this channel\n* `,
+    `: Start a new game in this channel\n`,
+    `* `,
     Block(`@epyc status`),
-    `: Show the status of all games in this channel\n\n👨🏿‍💻 Go to https://epyc.phlegmatic.ca to see old games!\n`,
+    `: Show the status of all games in this channel\n`,
+    `* `,
+    Block(`@epyc join <game>`),
+    `: Join an in-progress game\n`,
+    `* `,
+    Block(`@epyc leave <game>`),
+    `: Leave an in-progress game\n`,
+    `* `,
+    Block(`@epyc shuffle <game>`),
+    `: Shuffle remaining turns for an in-progress game\n`,
+    `\n👨🏿‍💻 Go to https://epyc.phlegmatic.ca to see old games!\n`,
 ];
+
+export class GameLogicError extends Error {
+    public messageContent: MessageContent;
+
+    constructor(...messageContent: MessageContent) {
+        super(GameLogicError.messageContentToString(messageContent));
+
+        this.messageContent = messageContent;
+
+        // Typescript insanity -- see https://github.com/Microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
+        Object.setPrototypeOf(this, GameLogicError.prototype);
+    }
+
+    static messageContentToString(messageContent: MessageContent) {
+        return messageContent
+            .map((chunk) => {
+                if (typeof chunk === 'string') {
+                    return chunk;
+                }
+                return chunk.message;
+            })
+            .join('');
+    }
+}
 
 export abstract class Bot {
     protected abstract sendStringMessage(channel: ChannelModel, content: string): Promise<void>;
@@ -83,29 +120,50 @@ export abstract class Bot {
         return this.sendStringDM(person, stringContent);
     }
 
-    processMessage(channel: ChannelModel, message: string, mentions: PersonModel[]) {
+    async processMessage(channel: ChannelModel, person: PersonModel, message: string, mentions: PersonModel[]) {
         let allItems = message.split(' ');
 
         if (allItems.length < 2) {
             return this.printIDunnoMessage(channel);
         }
 
-        switch (allItems[1]) {
-            case 'help':
-                this.printHelpMessage(channel);
-                break;
+        try {
+            switch (allItems[1]) {
+                case 'help':
+                    this.printHelpMessage(channel);
+                    break;
 
-            case 'start':
-                this.startGame(channel, mentions);
-                break;
+                case 'start':
+                    await this.startGame(channel, mentions);
+                    break;
 
-            case 'status':
-                this.gameManager.gameManager.reportStatus(channel);
-                break;
+                case 'status':
+                    await this.gameManager.gameManager.reportStatus(channel);
+                    break;
 
-            default:
+                case 'join':
+                    await this.onJoin(channel, person, allItems);
+                    break;
+
+                case 'leave':
+                    await this.onLeave(channel, person, allItems);
+                    break;
+
+                // case 'shuffle':
+                //     this.onShuffle(channel, person, allItems);
+                //     break;
+
+                default:
+                    this.printIDunnoMessage(channel);
+                    break;
+            }
+        } catch (error) {
+            if (error instanceof GameLogicError) {
+                this.sendMessage(channel, ...error.messageContent);
+            } else {
+                console.log(error);
                 this.printIDunnoMessage(channel);
-                break;
+            }
         }
     }
 
@@ -123,11 +181,30 @@ export abstract class Bot {
             players.push(players[0]);
         }
 
-        try {
-            await this.gameManager.gameManager.startGame(players, channel);
-        } catch (error) {
-            this.sendMessage(channel, 'Could not create game.');
-            return;
-        }
+        await this.gameManager.gameManager.startGame(players, channel);
     }
+
+    private async onJoin(channel: ChannelModel, person: PersonModel, allItems: string[]) {
+        if (allItems.length < 3) {
+            return this.printHelpMessage(channel);
+        }
+
+        await this.gameManager.gameManager.joinGame(channel, person, allItems[2]);
+    }
+
+    private async onLeave(channel: ChannelModel, person: PersonModel, allItems: string[]) {
+        if (allItems.length < 3) {
+            return this.printHelpMessage(channel);
+        }
+
+        await this.gameManager.gameManager.leaveGame(channel, person, allItems[2]);
+    }
+
+    // private onShuffle(channel: ChannelModel, person: PersonModel, allItems: string[]) {
+    //     if (allItems.length < 3) {
+    //         return this.printHelpMessage(channel);
+    //     }
+
+    //     this.gameManager.gameManager.shuffleGame(channel, person, allItems[2]);
+    // }
 }

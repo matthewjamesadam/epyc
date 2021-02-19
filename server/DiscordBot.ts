@@ -40,12 +40,13 @@ export class DiscordBot extends Bot {
     processDiscordMessage(message: Discord.Message) {
         let channelName = message.channel.type === 'text' ? message.channel.name : '';
         const channel = ChannelModel.create(message.channel.id, channelName, BotTarget.discord);
+        const person = PersonModel.create(message.author.id, message.author.username, BotTarget.discord);
 
         const mentions: Array<PersonModel> = message.mentions.users
             .filter((user) => user.id !== this.client.user?.id)
             .map((user) => PersonModel.create(user.id, user.username, BotTarget.discord));
 
-        this.processMessage(channel, message.cleanContent, mentions);
+        this.processMessage(channel, person, message.cleanContent, mentions);
     }
 
     protected async sendStringMessage(channel: ChannelModel, content: string): Promise<void> {
