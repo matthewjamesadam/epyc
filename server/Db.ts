@@ -1,6 +1,6 @@
 import { deflate, inflate, Serializable, Serialize } from 'serialazy';
 import { SerializeDate, SerializeArray, SerializeArrayBasic, SerializeObjectId } from './Serialize';
-import spacetime from 'spacetime';
+import { v4 as uuid } from 'uuid';
 import * as MongoDb from 'mongodb';
 import { Constructor } from 'serialazy/lib/dist/types';
 import * as API from './api';
@@ -39,6 +39,10 @@ export class PersonModel {
         return model;
     }
 
+    equals(other: PersonModel) {
+        return this.id === other.id && this.target === other.target;
+    }
+
     toApi(): API.Person {
         return { name: this.name };
     }
@@ -74,11 +78,15 @@ export class FrameModel {
     @Serialize({ optional: true }) public title?: string;
     @Serialize({ optional: true }) public image?: FrameImageModel;
 
-    static create(id: string, person: PersonModel) {
+    static create(person: PersonModel) {
         const model = new FrameModel();
-        model.id = id;
+        model.id = uuid();
         model.person = person;
         return model;
+    }
+
+    get isComplete(): boolean {
+        return !!this.title || !!this.image;
     }
 
     toApi(): API.Frame {

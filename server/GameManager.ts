@@ -1,16 +1,14 @@
 import { BotTarget, ChannelModel, FrameImageModel, FrameModel, GameModel, PersonModel } from './Db';
-import { v4 as uuid } from 'uuid';
 import { Readable, Writable } from 'stream';
 import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
 import { Db } from './Db';
 import { generateFakeWord } from 'fakelish';
-import { Bot, MessageContent, Bold } from './Bot';
+import { Bot, MessageContent, Bold, GameLogicError } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageDecoder } from './ImageDecoder';
 import Cfg from './Cfg';
-import { Message } from 'discord.js';
 
 // Cheap IOC container
 export class GameManagerProvider {
@@ -34,7 +32,7 @@ export class GameManager {
 
     async startGame(players: Array<PersonModel>, channel: ChannelModel): Promise<void> {
         // Collect people
-        const frames: Array<FrameModel> = players.map((player) => FrameModel.create(uuid(), player));
+        const frames: Array<FrameModel> = players.map((player) => FrameModel.create(player));
 
         // FIXME -- for dev testing -- remove at some point!
         if (!Cfg.isProduction) {
@@ -44,8 +42,7 @@ export class GameManager {
         }
 
         if (frames.length < 4) {
-            this.sendMessage(channel, 'You need at least 4 people to start a game of EPYC.');
-            return;
+            throw new GameLogicError('You need at least 4 people to start a game of Eat Poop You Cat');
         }
 
         let gameName = await generateFakeWord(7, 12);
@@ -56,8 +53,7 @@ export class GameManager {
             await this.db.createGame(game);
         } catch (error) {
             console.log(error);
-            this.sendMessage(channel, 'Could not create game.');
-            return;
+            throw new GameLogicError('Could not create game');
         }
 
         let firstPerson = frames[0].person;
@@ -123,7 +119,7 @@ export class GameManager {
         game.frames[frameIdx] = frame;
 
         await this.db.putGame(game);
-        await this.onFrameDone(game, frame, frameIdx);
+        await this.onFrameDone(game, frameIdx);
     }
 
     private async pipeToStream(input: Readable, output: Writable): Promise<void> {
@@ -168,7 +164,7 @@ export class GameManager {
             frame.image = FrameImageModel.create(fileUrl, fileName, width, height);
 
             await this.db.putGame(game);
-            await this.onFrameDone(game, frame, frameIdx);
+            await this.onFrameDone(game, frameIdx);
         } finally {
             await this.unlink(path);
         }
@@ -178,7 +174,7 @@ export class GameManager {
         return `${this.urlBase}/game/${game.name}`;
     }
 
-    private async onFrameDone(game: GameModel, frame: FrameModel, frameIdx: number) {
+    private async onFrameDone(game: GameModel, frameIdx: number) {
         // If the game is over, mark the game model and tell everyone
         if (frameIdx + 1 >= game.frames.length) {
             game.isComplete = true;
@@ -230,19 +226,105 @@ export class GameManager {
         const games = await this.db.getGames();
 
         if (games.length === 0) {
-            this.sendMessage(channel, 'No games are in progress in this channel');
+            throw new GameLogicError('No games are in progress in this channel');
             return;
         }
 
         const gameMessages: MessageContent = games.flatMap((game) => {
-            const nextFrame = game.frames.find((frame) => !frame.image && !frame.title);
-            if (!nextFrame) {
+            const nextFrameIdx = game.frames.findIndex((frame) => !frame.image && !frame.title);
+            if (nextFrameIdx < 0) {
                 return []; // Should never happen
             }
-
-            return ['\n', Bold(game.name), ': Waiting on ', Bold(nextFrame.person.name)];
+            const nextFrame = game.frames[nextFrameIdx];
+            const turnsComplete = nextFrameIdx;
+            const turnsLeft = game.frames.length - nextFrameIdx;
+            return [
+                '\n',
+                Bold(game.name),
+                ': Waiting on ',
+                Bold(nextFrame.person.name),
+                `.  ${turnsComplete} turns completed, ${turnsLeft} remaining.`,
+            ];
         });
 
         this.sendMessage(channel, 'The following games are in progress:', ...gameMessages);
     }
+
+    async joinGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
+        const game = await this.db.getGame(gameName);
+
+        if (!game) {
+            throw new GameLogicError('Game ', Bold(gameName), ' does not exist');
+        }
+
+        if (game.isComplete) {
+            throw new GameLogicError('Game ', Bold(gameName), ' is already complete');
+        }
+
+        if (game.frames.find((frame) => frame.person.equals(person))) {
+            throw new GameLogicError('You are already in game ', Bold(gameName));
+        }
+
+        game.frames.push(FrameModel.create(person));
+        await this.db.putGame(game);
+
+        this.sendMessage(channel, 'OK ', Bold(person.name), ', you are now in game ', Bold(gameName));
+    }
+
+    async leaveGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
+        const game = await this.db.getGame(gameName);
+
+        if (!game) {
+            throw new GameLogicError('Game ', Bold(gameName), ' does not exist');
+        }
+
+        if (game.isComplete) {
+            throw new GameLogicError('Game ', Bold(gameName), ' is already complete');
+        }
+
+        const frameIdx = game.frames.findIndex((frame) => frame.person.equals(person));
+
+        if (frameIdx === -1) {
+            throw new GameLogicError('You are not in game ', Bold(gameName));
+        }
+
+        if (game.frames[frameIdx].isComplete) {
+            throw new GameLogicError(`You've already played your turn on game `, Bold(gameName));
+        }
+
+        game.frames.splice(frameIdx, 1);
+        await this.db.putGame(game);
+        await this.onFrameDone(game, frameIdx - 1);
+    }
+
+    // async shuffleGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
+    //     const game = await this.db.getGame(gameName);
+
+    //     if (!game) {
+    //         throw new GameLogicError('Game ', Bold(gameName), ' does not exist');
+    //     }
+
+    //     if (game.isComplete) {
+    //         throw new GameLogicError('Game ', Bold(gameName), ' is already complete');
+    //     }
+
+    //     const frames = game.frames;
+
+    //     // Shuffle remaining frames
+    //     const firstIncompleteFrame = game.frames.findIndex(frame => !frame.isComplete);
+    //     if (firstIncompleteFrame < 0) {
+    //         // Should never happen
+    //         throw new Error("Could not shuffle");
+    //     }
+
+    //     // Shuffle
+    //     for (let i = frames.length - 1; i > 0; i--) {
+    //         const j = Math.floor(Math.random() * (i + 1));
+    //         [frames[i], frames[j]] = [frames[j], frames[i]];
+    //     }
+
+    //     await this.db.putGame(game);
+    //     await this.onFrameDone()
+
+    // }
 }
