@@ -6,6 +6,7 @@ import { Constructor } from 'serialazy/lib/dist/types';
 import * as API from './api';
 import Cfg from './Cfg';
 import { FilterQuery } from 'mongodb';
+import { Avatar } from './api';
 
 export enum BotTarget {
     discord = 'discord',
@@ -23,6 +24,45 @@ export class ChannelModel {
         model.name = name;
         model.target = target;
         return model;
+    }
+}
+
+export class AvatarModel {
+    @Serialize({ name: '_id' }) public id: string = '';
+    @Serialize() public personId: string = '';
+    @Serialize() public target: BotTarget = BotTarget.discord;
+    @Serialize() public url: string = '';
+    @Serialize() public width: number = 0;
+    @Serialize() public height: number = 0;
+    @Serialize() public hash: string = '';
+    @SerializeDate() public lastUpdated: Date = new Date();
+
+    static create(
+        id: string,
+        personId: string,
+        target: BotTarget,
+        url: string,
+        width: number,
+        height: number,
+        hash: string
+    ): AvatarModel {
+        const model = new AvatarModel();
+        model.id = id;
+        model.personId = personId;
+        model.target = target;
+        model.url = url;
+        model.width = width;
+        model.height = height;
+        model.hash = hash;
+        return model;
+    }
+
+    toApi(): API.Avatar {
+        return {
+            url: this.url,
+            width: this.width,
+            height: this.height,
+        };
     }
 }
 
@@ -49,10 +89,10 @@ export class PersonModel {
 }
 
 export class FrameImageModel {
-    @Serialize({ optional: true }) public imageUrl: string = '';
-    @Serialize({ optional: true }) public imageFileName: string = '';
-    @Serialize({ optional: true }) public width: number = 0;
-    @Serialize({ optional: true }) public height: number = 0;
+    @Serialize() public imageUrl: string = '';
+    @Serialize() public imageFileName: string = '';
+    @Serialize() public width: number = 0;
+    @Serialize() public height: number = 0;
 
     static create(imageUrl: string, imageFileName: string, width: number, height: number): FrameImageModel {
         const model = new FrameImageModel();
@@ -122,6 +162,7 @@ export class GameModel {
 export class Db {
     client: MongoDb.MongoClient;
     game: MongoDb.Collection;
+    avatar: MongoDb.Collection;
 
     static async create(): Promise<Db> {
         const connectionString = process.env['DB_CONNECTION_STRING'];
@@ -141,9 +182,15 @@ export class Db {
         this.client = client;
         const db = this.client.db(Cfg.dbName);
         this.game = db.collection('Game');
+        this.avatar = db.collection('Avatar');
     }
 
-    private async init() {}
+    private async init() {
+        await this.avatar.createIndex({
+            personId: 1,
+            target: 1,
+        });
+    }
 
     async createGame(game: GameModel) {
         const doc = deflate(game);
@@ -170,6 +217,19 @@ export class Db {
         let doc = deflate(game);
         await this.game.replaceOne({ _id: game.name }, doc);
         return inflate(GameModel, doc);
+    }
+
+    async putAvatar(avatar: AvatarModel): Promise<void> {
+        const doc = deflate(avatar);
+        await this.avatar.replaceOne({ personId: avatar.personId, target: avatar.target }, doc, { upsert: true });
+    }
+
+    async getAvatar(personId: string, target: BotTarget): Promise<AvatarModel | undefined> {
+        const doc = await this.avatar.findOne({ personId, target });
+        if (doc) {
+            return inflate(AvatarModel, doc);
+        }
+        return undefined;
     }
 
     private inflateArray<Type>(docs: any[], type: Constructor<Type>): Type[] {

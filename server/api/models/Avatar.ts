@@ -13,49 +13,49 @@
  */
 
 import { exists, mapValues } from '../runtime';
-import {
-    Avatar,
-    AvatarFromJSON,
-    AvatarFromJSONTyped,
-    AvatarToJSON,
-} from './';
-
 /**
  * 
  * @export
- * @interface Person
+ * @interface Avatar
  */
-export interface Person {
+export interface Avatar {
     /**
      * 
      * @type {string}
-     * @memberof Person
+     * @memberof Avatar
      */
-    name: string;
+    url: string;
     /**
      * 
-     * @type {Avatar}
-     * @memberof Person
+     * @type {number}
+     * @memberof Avatar
      */
-    avatar?: Avatar;
+    width: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof Avatar
+     */
+    height: number;
 }
 
-export function PersonFromJSON(json: any): Person {
-    return PersonFromJSONTyped(json, false);
+export function AvatarFromJSON(json: any): Avatar {
+    return AvatarFromJSONTyped(json, false);
 }
 
-export function PersonFromJSONTyped(json: any, ignoreDiscriminator: boolean): Person {
+export function AvatarFromJSONTyped(json: any, ignoreDiscriminator: boolean): Avatar {
     if ((json === undefined) || (json === null)) {
         return json;
     }
     return {
         
-        'name': json['name'],
-        'avatar': !exists(json, 'avatar') ? undefined : AvatarFromJSON(json['avatar']),
+        'url': json['url'],
+        'width': json['width'],
+        'height': json['height'],
     };
 }
 
-export function PersonToJSON(value?: Person | null): any {
+export function AvatarToJSON(value?: Avatar | null): any {
     if (value === undefined) {
         return undefined;
     }
@@ -64,8 +64,9 @@ export function PersonToJSON(value?: Person | null): any {
     }
     return {
         
-        'name': value.name,
-        'avatar': AvatarToJSON(value.avatar),
+        'url': value.url,
+        'width': value.width,
+        'height': value.height,
     };
 }
 

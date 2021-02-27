@@ -1,6 +1,7 @@
 import {
     EpycApi as EpycApiInterface,
     EpycApiRouter,
+    Avatar,
     Context,
     Configuration,
     HttpError,
@@ -30,7 +31,17 @@ class EpycApiImpl implements EpycApiInterface {
             throw new HttpError(401);
         }
 
-        return model.toApi();
+        const game = model.toApi();
+
+        // Attach avatars
+        const fetchAvatars = model.frames.map(async (frame, idx) => {
+            const avatar = await this.db.getAvatar(frame.person.id, frame.person.target);
+            game.frames[idx].person.avatar = avatar?.toApi();
+        });
+
+        await Promise.all(fetchAvatars);
+
+        return game;
     }
 
     private logError(error: Error) {

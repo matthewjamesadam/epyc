@@ -1,3 +1,4 @@
+export * from './Avatar';
 export * from './Frame';
 export * from './FrameImageData';
 export * from './FramePlayData';

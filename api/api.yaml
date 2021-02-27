@@ -137,12 +137,29 @@ paths:
 
 components:
   schemas:
+    Avatar:
+      title: Avatar
+      type: object
+      properties:
+        url:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+      required:
+        - url
+        - width
+        - height
+
     Person:
       title: Person
       type: object
       properties:
         name:
           type: string
+        avatar:
+          $ref: '#/definitions/Avatar'
       required:
         - name
 
@@ -203,6 +220,5 @@ components:
           items:
             $ref: '#/definitions/Frame'
       required:
-        - id
         - name
         - frames

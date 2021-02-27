@@ -80,11 +80,19 @@ export class GameLogicError extends Error {
     }
 }
 
+export interface PersonAvatar {
+    url: string;
+    width: number;
+    height: number;
+}
+
 export abstract class Bot {
     protected abstract sendStringMessage(channel: ChannelModel, content: string): Promise<void>;
     protected abstract sendStringDM(person: PersonModel, content: string): Promise<void>;
     protected abstract toBold(content: string): string;
     protected abstract toBlock(content: string): string;
+
+    abstract getAvatar(person: PersonModel): Promise<PersonAvatar | undefined>;
 
     protected gameManager: GameManagerProvider;
 

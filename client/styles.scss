@@ -23,6 +23,23 @@
 
 @import 'node_modules/bootstrap/scss/button-group';
 
+/*
+    Horizontal layout for large screens, vertical otherwise
+*/
+
+.large-size-layout {
+    flex-direction: row;
+}
+
+@include media-breakpoint-down(md) {
+    .large-size-layout {
+        flex-direction: column;
+    }
+}
+
+/*
+    For colour picker controls
+*/
 .react-colorful__saturation {
     border-radius: 0.23rem 0.23rem 0 0;
     box-shadow: none;
