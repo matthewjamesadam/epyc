@@ -1,8 +1,28 @@
 import * as React from 'react';
 import { Card, Col, Row, Spinner } from 'react-bootstrap';
-import { EpycApi, Frame, Game } from './Apis';
+import { EpycApi, Frame, Game, Person } from './Apis';
 import Error404 from './Error404';
 import { useAsyncActionOnce } from './useAsyncAction';
+
+function GameFrameAvatar(props: { person: Person }) {
+    const avatar = props.person.avatar;
+
+    if (!avatar) {
+        return (
+            <div>
+                <span className="p-1 display-4 rounded-lg border bg-white">🧑🏼‍🎨</span>
+            </div>
+        );
+    }
+
+    const style: React.CSSProperties = {
+        maxWidth: '64px',
+        height: 'auto',
+        objectFit: 'contain',
+    };
+
+    return <img className="rounded-lg" src={avatar.url} style={style} width={avatar.width} height={avatar.height} />;
+}
 
 function GameFrame(props: { idx: number; frame: Frame }) {
     let content = null;
@@ -10,9 +30,15 @@ function GameFrame(props: { idx: number; frame: Frame }) {
     if (props.frame.playData.title) {
         content = props.frame.playData.title;
     } else if (props.frame.playData.image) {
+        const style: React.CSSProperties = {
+            maxWidth: '100%',
+            height: 'auto',
+            objectFit: 'contain',
+        };
         content = (
             <img
                 src={props.frame.playData.image.imageUrl}
+                style={style}
                 width={props.frame.playData.image.width}
                 height={props.frame.playData.image.height}
             />
@@ -20,8 +46,13 @@ function GameFrame(props: { idx: number; frame: Frame }) {
     }
 
     return (
-        <Card key={props.idx} className="flex-row mb-2">
-            <Card.Header className="border-0">{props.frame.person.name}</Card.Header>
+        <Card key={props.idx} className="large-size-layout mb-2">
+            <Card.Header className="border-0 text-center">
+                <div className="mb-2">{props.frame.person.name}</div>
+                <div>
+                    <GameFrameAvatar person={props.frame.person} />
+                </div>
+            </Card.Header>
             <Card.Body>{content}</Card.Body>
         </Card>
     );
@@ -38,7 +69,7 @@ export default function (props: { gameName: string }) {
         return <Error404 />;
     }
 
-    const cards = game.frames.map((frame, idx) => <GameFrame idx={idx} frame={frame} />);
+    const cards = game.frames.map((frame, idx) => <GameFrame key={idx} idx={idx} frame={frame} />);
 
     return <div className="mt-5">{cards}</div>;
 }

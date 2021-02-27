@@ -1,5 +1,5 @@
 import Discord, { TextChannel } from 'discord.js';
-import { Bot } from './Bot';
+import { Bot, PersonAvatar } from './Bot';
 import { BotTarget, ChannelModel, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
 
@@ -70,5 +70,15 @@ export class DiscordBot extends Bot {
 
     protected toBlock(content: string): string {
         return `\`${content}\``;
+    }
+
+    async getAvatar(person: PersonModel): Promise<PersonAvatar | undefined> {
+        const discordPerson = await this.client.users.fetch(person.id);
+        const url = discordPerson.avatarURL({ format: 'png', size: 64 });
+        if (!url) {
+            return undefined;
+        }
+
+        return { url, width: 64, height: 64 };
     }
 }

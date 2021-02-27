@@ -1,4 +1,4 @@
-import { BotTarget, ChannelModel, FrameImageModel, FrameModel, GameModel, PersonModel } from './Db';
+import { AvatarModel, BotTarget, ChannelModel, FrameImageModel, FrameModel, GameModel, PersonModel } from './Db';
 import { Readable, Writable } from 'stream';
 import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
@@ -8,7 +8,11 @@ import { Bot, MessageContent, Bold, GameLogicError } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageDecoder } from './ImageDecoder';
+import spacetime from 'spacetime';
 import Cfg from './Cfg';
+import fetch from 'node-fetch';
+import crypto from 'crypto';
+import { v4 as uuid } from 'uuid';
 
 // Cheap IOC container
 export class GameManagerProvider {
@@ -119,10 +123,11 @@ export class GameManager {
         game.frames[frameIdx] = frame;
 
         await this.db.putGame(game);
+        await this.updateAvatar(frame.person);
         await this.onFrameDone(game, frameIdx);
     }
 
-    private async pipeToStream(input: Readable, output: Writable): Promise<void> {
+    private async pipeToStream(input: NodeJS.ReadableStream, output: NodeJS.WritableStream): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             output.on('finish', () => {
                 resolve();
@@ -140,6 +145,65 @@ export class GameManager {
                 resolve();
             });
         });
+    }
+
+    private async updateAvatar(person: PersonModel) {
+        const [dbAvatar, botAvatar] = await Promise.all([
+            this.db.getAvatar(person.id, person.target),
+            this.getBotTarget(person.target).getAvatar(person),
+        ]);
+
+        if (!botAvatar) {
+            return; // Nothing to update
+        }
+
+        const lastValid = spacetime().subtract(1, 'month');
+
+        if (dbAvatar && spacetime(dbAvatar.lastUpdated).isAfter(lastValid)) {
+            return; // Nothing to update
+        }
+
+        // Fetch avatar
+        const { fd, path, cleanup } = await makeTmpFile();
+        try {
+            const fileWriteStream = await fs.createWriteStream('', { fd });
+            const avatarRequest = await fetch(botAvatar.url);
+            if (!avatarRequest.body) {
+                return; // No avatar body?
+            }
+
+            this.pipeToStream(avatarRequest.body, fileWriteStream);
+
+            const fileReadStream1 = await fs.createReadStream(path);
+            const cryptoStream = crypto.createHash('md5');
+
+            this.pipeToStream(fileReadStream1, cryptoStream);
+            const hash = cryptoStream.digest('hex');
+
+            if (hash === dbAvatar?.hash) {
+                return; // Same avatar as before
+            }
+
+            const id = dbAvatar?.id || uuid();
+
+            const fileReadStream2 = await fs.createReadStream(path);
+
+            const { fileName, fileUrl } = await ImageStore.uploadAvatar(id, fileReadStream2);
+
+            const newAvatar = AvatarModel.create(
+                id,
+                person.id,
+                person.target,
+                fileUrl,
+                botAvatar.width,
+                botAvatar.height,
+                hash
+            );
+
+            await this.db.putAvatar(newAvatar);
+        } finally {
+            await this.unlink(path);
+        }
     }
 
     async playImageTurn(gameName: string, frameId: string, blob: Readable) {
@@ -164,6 +228,7 @@ export class GameManager {
             frame.image = FrameImageModel.create(fileUrl, fileName, width, height);
 
             await this.db.putGame(game);
+            await this.updateAvatar(frame.person);
             await this.onFrameDone(game, frameIdx);
         } finally {
             await this.unlink(path);

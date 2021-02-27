@@ -12,6 +12,33 @@ export default class ImageStore {
         return `${gameName}/${frameId}.png`;
     }
 
+    static getAvatarFileUrl(id: string) {
+        const fileName = this.getAvatarFileName(id);
+        return `https://${Cfg.imageStoreAwsBucket}.s3-us-west-2.amazonaws.com/${fileName}`;
+    }
+
+    static getAvatarFileName(id: string) {
+        return `avatars/${id}.png`;
+    }
+
+    static async uploadAvatar(id: string, data: Readable): Promise<{ fileName: string; fileUrl: string }> {
+        const s3 = new AWS.S3();
+
+        const fileName = this.getAvatarFileName(id);
+        const fileUrl = this.getAvatarFileUrl(id);
+
+        await s3
+            .upload({
+                Bucket: Cfg.imageStoreAwsBucket,
+                Key: fileName,
+                Body: data,
+                ContentType: 'image/png',
+            })
+            .promise();
+
+        return { fileName, fileUrl };
+    }
+
     static async uploadImage(
         gameName: string,
         frameId: string,

@@ -13,6 +13,13 @@
  */
 
 import { exists, mapValues } from '../runtime';
+import {
+    Avatar,
+    AvatarFromJSON,
+    AvatarFromJSONTyped,
+    AvatarToJSON,
+} from './';
+
 /**
  * 
  * @export
@@ -25,6 +32,12 @@ export interface Person {
      * @memberof Person
      */
     name: string;
+    /**
+     * 
+     * @type {Avatar}
+     * @memberof Person
+     */
+    avatar?: Avatar;
 }
 
 export function PersonFromJSON(json: any): Person {
@@ -38,6 +51,7 @@ export function PersonFromJSONTyped(json: any, ignoreDiscriminator: boolean): Pe
     return {
         
         'name': json['name'],
+        'avatar': !exists(json, 'avatar') ? undefined : AvatarFromJSON(json['avatar']),
     };
 }
 
@@ -51,6 +65,7 @@ export function PersonToJSON(value?: Person | null): any {
     return {
         
         'name': value.name,
+        'avatar': AvatarToJSON(value.avatar),
     };
 }
 
