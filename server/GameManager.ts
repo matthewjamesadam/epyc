@@ -429,11 +429,6 @@ export class GameManager {
             return;
         }
 
-        `It's your turn to play Eat Poop You Cat!\nYou can go here to play your turn: ${this.getFramePlayUrl(
-            game,
-            frame
-        )}`;
-
         // Add one warning ping
         frame.warnings = warnings + 1;
         await this.db.putGame(game);
