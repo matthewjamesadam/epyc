@@ -117,6 +117,7 @@ export class FrameModel {
     @Serialize() public person: PersonModel = new PersonModel();
     @Serialize({ optional: true }) public title?: string;
     @Serialize({ optional: true }) public image?: FrameImageModel;
+    @Serialize({ optional: true }) public warnings?: number;
 
     static create(person: PersonModel) {
         const model = new FrameModel();

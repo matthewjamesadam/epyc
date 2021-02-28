@@ -4,7 +4,7 @@ import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
 import { Db } from './Db';
 import { generateFakeWord } from 'fakelish';
-import { Bot, MessageContent, Bold, GameLogicError } from './Bot';
+import { Bot, MessageContent, Bold, GameLogicError, Block } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageDecoder } from './ImageDecoder';
@@ -262,10 +262,17 @@ export class GameManager {
         }
     }
 
+    private getFramePlayUrl(game: GameModel, frame: FrameModel) {
+        return `${this.urlBase}/play/${game.name}/${frame.id}`;
+    }
+
     async sendFrameMessage(game: GameModel, frame: FrameModel) {
         this.getBotTarget(frame.person.target).sendDM(
             frame.person,
-            `It's your turn to play Eat Poop You Cat!\nYou can go here to play your turn: ${this.urlBase}/play/${game.name}/${frame.id}`
+            `It's your turn to play Eat Poop You Cat!\nYou can go here to play your turn: ${this.getFramePlayUrl(
+                game,
+                frame
+            )}`
         );
     }
 
@@ -288,7 +295,7 @@ export class GameManager {
             'channel.id': channel.id,
         };
 
-        const games = await this.db.getGames();
+        const games = await (await this.db.getGames()).filter((game) => !game.isComplete);
 
         if (games.length === 0) {
             throw new GameLogicError('No games are in progress in this channel');
@@ -392,4 +399,54 @@ export class GameManager {
     //     await this.onFrameDone()
 
     // }
+
+    private async notifyGame(game: GameModel): Promise<void> {
+        // Find frame
+        const incompleteFrameIdx = game.frames.findIndex((frame) => !frame.isComplete);
+        if (incompleteFrameIdx < 0) {
+            return; // Shouldn't happen
+        }
+
+        const frame = game.frames[incompleteFrameIdx];
+
+        const warnings = frame.warnings || 0;
+
+        if (warnings == 2) {
+            // Drop this person from the game
+            game.frames.splice(incompleteFrameIdx, 1);
+            await this.db.putGame(game);
+            await this.onFrameDone(game, incompleteFrameIdx - 1);
+
+            await this.getBotTarget(frame.person.target).sendDM(
+                frame.person,
+                'Oh no!  You took too long to play your turn on game ',
+                Bold(game.name),
+                '!\n',
+                `If you'd like to re-join the game, you can use the command `,
+                Block(`@epyc join ${game.name}`)
+            );
+
+            return;
+        }
+
+        // Add one warning ping
+        frame.warnings = warnings + 1;
+        await this.db.putGame(game);
+
+        await this.getBotTarget(frame.person.target).sendDM(
+            frame.person,
+            'This is a reminder to play your turn on game ',
+            Bold(game.name),
+            '!\n',
+            `You can go here to play your turn: ${this.getFramePlayUrl(game, frame)}`
+        );
+    }
+
+    async notifyPlayers(): Promise<void> {
+        const games = (await this.db.getGames()).filter((game) => !game.isComplete);
+
+        const promises = games.map((game) => this.notifyGame(game));
+
+        await Promise.all(promises);
+    }
 }
