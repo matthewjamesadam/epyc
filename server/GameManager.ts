@@ -4,7 +4,7 @@ import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
 import { Db } from './Db';
 import { generateFakeWord } from 'fakelish';
-import { Bot, MessageContent, Bold, GameLogicError } from './Bot';
+import { Bot, MessageContent, Bold, GameLogicError, Block } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageDecoder } from './ImageDecoder';
@@ -421,7 +421,9 @@ export class GameManager {
                 frame.person,
                 'Oh no!  You took too long to play your turn on game ',
                 Bold(game.name),
-                '!'
+                '!\n',
+                `If you'd like to re-join the game, you can use the command `,
+                Block(`@epyc join ${game.name}`)
             );
 
             return;
