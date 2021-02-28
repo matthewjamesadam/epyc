@@ -37,6 +37,10 @@ export class DiscordBot extends Bot {
         return promise;
     }
 
+    async deinit() {
+        this.client.destroy();
+    }
+
     processDiscordMessage(message: Discord.Message) {
         let channelName = message.channel.type === 'text' ? message.channel.name : '';
         const channel = ChannelModel.create(message.channel.id, channelName, BotTarget.discord);

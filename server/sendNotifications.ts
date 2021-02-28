@@ -32,7 +32,12 @@ const notify = async () => {
 
     gameManagerProvider._gameManager = new GameManager(db, discordBot);
 
+    console.log('*** Sending Notifications');
     await gameManagerProvider.gameManager.notifyPlayers();
+    console.log('*** Done Sending Notifications');
+
+    await discordBot.deinit();
+    await db.deinit();
 };
 
 notify();

@@ -193,6 +193,10 @@ export class Db {
         });
     }
 
+    async deinit() {
+        await this.client.close();
+    }
+
     async createGame(game: GameModel) {
         const doc = deflate(game);
         await this.game.insertOne(doc);
