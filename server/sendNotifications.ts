@@ -1,11 +1,4 @@
-import Express from 'express';
-import cors from 'cors';
-import { EpycApi } from './EpycApiImpl';
-import { Configuration } from './api';
-import { Db, GameModel } from './Db';
-import path from 'path';
-import expressStaticGzip from 'express-static-gzip';
-import CookieParser from 'cookie-parser';
+import { Db } from './Db';
 import { DiscordBot } from './DiscordBot';
 import { GameManager, GameManagerProvider } from './GameManager';
 

@@ -30,16 +30,8 @@ export const COLLECTION_FORMATS = {
 };
 
 export interface Context {
-    authPayload?: object | null | undefined;
     req: Express.Request;
     res: Express.Response;
-}
-
-export class Configuration {
-    constructor(
-        public verifyAuthToken: (auth: string) => Promise<object | null>,
-        public generateAuthToken: (auth: object) => Promise<string>)
-        {}
 }
 
 export type Json = any;

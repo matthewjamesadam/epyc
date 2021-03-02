@@ -1,7 +1,6 @@
 import Express from 'express';
 import cors from 'cors';
-import { EpycApi } from './EpycApiImpl';
-import { Configuration } from './api';
+import { EpycApi } from './EpycApi';
 import { Db } from './Db';
 import path from 'path';
 import expressStaticGzip from 'express-static-gzip';
@@ -51,12 +50,8 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider) => {
     app.use('/api', corsMiddleware);
     app.use(CookieParser());
 
-    const cfg = new Configuration(
-        async (string) => null,
-        async () => ''
-    );
-
-    app.use('/api', EpycApi(db, gameManagerProvider, cfg));
+    const epycApi = new EpycApi(db, gameManagerProvider);
+    app.use('/api', epycApi.router);
 
     app.use('/api', (req, res, next) => {
         res.sendStatus(404);

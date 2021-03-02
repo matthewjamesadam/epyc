@@ -46,137 +46,94 @@ export interface PutFrameTitleParams {
      framePlayTitleRequest: FramePlayTitleRequest;
 }
 
-
-export interface EpycApi {
-
-    /**
-     */
-    getFramePlayData(params: GetFramePlayDataParams, context: runtime.Context): Promise<FramePlayData>;
-
-    /**
-     */
-    getGame(params: GetGameParams, context: runtime.Context): Promise<Game>;
-
-    /**
-     */
-    getGames(context: runtime.Context): Promise<Array<Game>>;
-
-    /**
-     */
-    putFrameImage(params: PutFrameImageParams, context: runtime.Context): Promise<void>;
-
-    /**
-     */
-    putFrameTitle(params: PutFrameTitleParams, context: runtime.Context): Promise<void>;
-
-    
-}
-
-
 /**
  * no description
  */
-export class EpycApiRouter {
+export abstract class EpycApiBase {
 
     router = Express.Router()
-    api: EpycApi
-    cfg: runtime.Configuration
 
-    constructor(api: EpycApi, cfg: runtime.Configuration) {
-        this.api = api;
-        this.cfg = cfg;
+    /**
+     */
+    protected abstract getFramePlayData(params: GetFramePlayDataParams, context: runtime.Context): Promise<FramePlayData>;
+
+    /**
+     */
+    protected abstract getGame(params: GetGameParams, context: runtime.Context): Promise<Game>;
+
+    /**
+     */
+    protected abstract getGames(context: runtime.Context): Promise<Array<Game>>;
+
+    /**
+     */
+    protected abstract putFrameImage(params: PutFrameImageParams, context: runtime.Context): Promise<void>;
+
+    /**
+     */
+    protected abstract putFrameTitle(params: PutFrameTitleParams, context: runtime.Context): Promise<void>;
+
+
+    constructor() {
 
         this.router.get('/games/{gameName}/frame/{frameId}/playData'.replace(/{/g, ':').replace(/}/g, ''), async (req, res) => {
             try {
-                await this.getFramePlayData(req, res);
+                await this.handle_getFramePlayData(req, res);
             }
             catch (e) {
-                console.log(`Error occurred in getFramePlayData: ${e}`)
-                if (e.stack) {
-                    console.log(e.stack);
-                }
-                if (e.statusCode) {
-                    res.status(e.statusCode).send(e.message);
-                }
-                else {
-                    res.status(500).send(e.message);
-                }
+                this.processError(e, req, res);
             }
         });
         this.router.get('/games/{gameName}'.replace(/{/g, ':').replace(/}/g, ''), async (req, res) => {
             try {
-                await this.getGame(req, res);
+                await this.handle_getGame(req, res);
             }
             catch (e) {
-                console.log(`Error occurred in getGame: ${e}`)
-                if (e.stack) {
-                    console.log(e.stack);
-                }
-                if (e.statusCode) {
-                    res.status(e.statusCode).send(e.message);
-                }
-                else {
-                    res.status(500).send(e.message);
-                }
+                this.processError(e, req, res);
             }
         });
         this.router.get('/games'.replace(/{/g, ':').replace(/}/g, ''), async (req, res) => {
             try {
-                await this.getGames(req, res);
+                await this.handle_getGames(req, res);
             }
             catch (e) {
-                console.log(`Error occurred in getGames: ${e}`)
-                if (e.stack) {
-                    console.log(e.stack);
-                }
-                if (e.statusCode) {
-                    res.status(e.statusCode).send(e.message);
-                }
-                else {
-                    res.status(500).send(e.message);
-                }
+                this.processError(e, req, res);
             }
         });
         this.router.put('/games/{gameName}/frame/{frameId}/image'.replace(/{/g, ':').replace(/}/g, ''), async (req, res) => {
             try {
-                await this.putFrameImage(req, res);
+                await this.handle_putFrameImage(req, res);
             }
             catch (e) {
-                console.log(`Error occurred in putFrameImage: ${e}`)
-                if (e.stack) {
-                    console.log(e.stack);
-                }
-                if (e.statusCode) {
-                    res.status(e.statusCode).send(e.message);
-                }
-                else {
-                    res.status(500).send(e.message);
-                }
+                this.processError(e, req, res);
             }
         });
         this.router.put('/games/{gameName}/frame/{frameId}/title'.replace(/{/g, ':').replace(/}/g, ''), async (req, res) => {
             try {
-                await this.putFrameTitle(req, res);
+                await this.handle_putFrameTitle(req, res);
             }
             catch (e) {
-                console.log(`Error occurred in putFrameTitle: ${e}`)
-                if (e.stack) {
-                    console.log(e.stack);
-                }
-                if (e.statusCode) {
-                    res.status(e.statusCode).send(e.message);
-                }
-                else {
-                    res.status(500).send(e.message);
-                }
+                this.processError(e, req, res);
             }
         });
     }
 
-    async getFramePlayData(req: Express.Request, res: Express.Response) {
+    processError(e: any, req: Express.Request, res: Express.Response) {
+        console.log(`Error occurred in : ${e}`)
+        if (e.stack) {
+            console.log(e.stack);
+        }
+        if (e.statusCode) {
+            res.status(e.statusCode).send(e.message);
+        }
+        else {
+            res.status(500).send(e.message);
+        }
+    }
+
+    async handle_getFramePlayData(req: Express.Request, res: Express.Response) {
 
         const context: runtime.Context = {req, res};
-
 
 
 
@@ -190,16 +147,15 @@ export class EpycApiRouter {
             frameId,
         }
 
-        const response = await this.api.getFramePlayData(params, context);
+        const response = await this.getFramePlayData(params, context);
 
 
         res.json(response);
 
     }
-    async getGame(req: Express.Request, res: Express.Response) {
+    async handle_getGame(req: Express.Request, res: Express.Response) {
 
         const context: runtime.Context = {req, res};
-
 
 
 
@@ -211,13 +167,13 @@ export class EpycApiRouter {
             gameName,
         }
 
-        const response = await this.api.getGame(params, context);
+        const response = await this.getGame(params, context);
 
 
         res.json(response);
 
     }
-    async getGames(req: Express.Request, res: Express.Response) {
+    async handle_getGames(req: Express.Request, res: Express.Response) {
 
         const context: runtime.Context = {req, res};
 
@@ -227,16 +183,14 @@ export class EpycApiRouter {
 
 
 
-
-        const response = await this.api.getGames(context);
+        const response = await this.getGames(context);
 
         res.json(response);
 
     }
-    async putFrameImage(req: Express.Request, res: Express.Response) {
+    async handle_putFrameImage(req: Express.Request, res: Express.Response) {
 
         const context: runtime.Context = {req, res};
-
 
 
 
@@ -252,16 +206,15 @@ export class EpycApiRouter {
             body,
         }
 
-        const response = await this.api.putFrameImage(params, context);
+        const response = await this.putFrameImage(params, context);
 
 
         res.sendStatus(200);
 
     }
-    async putFrameTitle(req: Express.Request, res: Express.Response) {
+    async handle_putFrameTitle(req: Express.Request, res: Express.Response) {
 
         const context: runtime.Context = {req, res};
-
 
 
 
@@ -277,7 +230,7 @@ export class EpycApiRouter {
             framePlayTitleRequest,
         }
 
-        const response = await this.api.putFrameTitle(params, context);
+        const response = await this.putFrameTitle(params, context);
 
 
         res.sendStatus(200);

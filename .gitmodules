@@ -1,0 +1,3 @@
+[submodule "api/openapi-typescript-server"]
+	path = api/openapi-typescript-server
+	url = git@github.com:matthewjamesadam/openapi-typescript-server.git
