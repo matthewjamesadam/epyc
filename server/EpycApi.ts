@@ -1,9 +1,7 @@
 import {
-    EpycApi as EpycApiInterface,
-    EpycApiRouter,
+    EpycApiBase,
     Avatar,
     Context,
-    Configuration,
     HttpError,
     Person,
     Game,
@@ -17,8 +15,10 @@ import { FramePlayData } from './api/models/FramePlayData';
 import ImageStore from './ImageStore';
 import { GameManagerProvider } from './GameManager';
 
-class EpycApiImpl implements EpycApiInterface {
-    constructor(private db: Db, private gameManagerProvider: GameManagerProvider) {}
+export class EpycApi extends EpycApiBase {
+    constructor(private db: Db, private gameManagerProvider: GameManagerProvider) {
+        super();
+    }
 
     async getGames(context: Context): Promise<Array<Game>> {
         const gameModels = await this.db.getGames();
@@ -86,7 +86,3 @@ class EpycApiImpl implements EpycApiInterface {
         }
     }
 }
-
-export const EpycApi = (db: Db, gameManagerProvider: GameManagerProvider, cfg: Configuration) => {
-    return new EpycApiRouter(new EpycApiImpl(db, gameManagerProvider), cfg).router;
-};

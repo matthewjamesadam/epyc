@@ -48,7 +48,7 @@ export interface PutFrameTitleRequest {
 }
 
 /**
- * no description
+ * 
  */
 export class EpycApi extends runtime.BaseAPI {
 
@@ -63,7 +63,7 @@ export class EpycApi extends runtime.BaseAPI {
             throw new runtime.RequiredError('frameId','Required parameter requestParameters.frameId was null or undefined when calling getFramePlayData.');
         }
 
-        const queryParameters: runtime.HTTPQuery = {};
+        const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -91,7 +91,7 @@ export class EpycApi extends runtime.BaseAPI {
             throw new runtime.RequiredError('gameName','Required parameter requestParameters.gameName was null or undefined when calling getGame.');
         }
 
-        const queryParameters: runtime.HTTPQuery = {};
+        const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -115,7 +115,7 @@ export class EpycApi extends runtime.BaseAPI {
     /**
      */
     async getGamesRaw(): Promise<runtime.ApiResponse<Array<Game>>> {
-        const queryParameters: runtime.HTTPQuery = {};
+        const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -151,7 +151,7 @@ export class EpycApi extends runtime.BaseAPI {
             throw new runtime.RequiredError('body','Required parameter requestParameters.body was null or undefined when calling putFrameImage.');
         }
 
-        const queryParameters: runtime.HTTPQuery = {};
+        const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -189,7 +189,7 @@ export class EpycApi extends runtime.BaseAPI {
             throw new runtime.RequiredError('framePlayTitleRequest','Required parameter requestParameters.framePlayTitleRequest was null or undefined when calling putFrameTitle.');
         }
 
-        const queryParameters: runtime.HTTPQuery = {};
+        const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 

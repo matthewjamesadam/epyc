@@ -5,11 +5,11 @@
     "author": "",
     "license": "MIT",
     "devDependencies": {
-        "@openapitools/openapi-generator-cli": "^1.0.8-4.2.2"
+        "@openapitools/openapi-generator-cli": "^2.1.26"
     },
     "scripts": {
-        "generate-client-api": "export JAVA_HOME=~/Downloads/jdk-13.0.1.jdk/Contents/Home && openapi-generator generate -i ./api.yaml -g typescript-fetch -t ~/work/shared/api-template-ts-client --additional-properties=typescriptThreePlus=true -o ../client/api",
-        "generate-server-api": "export JAVA_HOME=~/Downloads/jdk-13.0.1.jdk/Contents/Home && openapi-generator generate -i ./api.yaml -g typescript-fetch -t ~/work/shared/api-template-ts-server -o ../server/api",
+        "generate-client-api": "export JAVA_HOME=~/Downloads/jdk-13.0.1.jdk/Contents/Home && openapi-generator-cli generate -i ./api.yaml -g typescript-fetch --additional-properties=typescriptThreePlus=true -o ../client/api",
+        "generate-server-api": "export JAVA_HOME=~/Downloads/jdk-13.0.1.jdk/Contents/Home && openapi-generator-cli generate -i ./api.yaml -g typescript-fetch -t ./openapi-typescript-server -o ../server/api",
         "generate-api": "npm run generate-client-api && npm run generate-server-api"
     }
 }
