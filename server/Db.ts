@@ -146,6 +146,7 @@ export class GameModel {
     @Serialize() public isComplete: boolean = false;
     @Serialize() public channel: ChannelModel = new ChannelModel();
     @SerializeArray(FrameModel) public frames: FrameModel[] = [];
+    @Serialize({ optional: true }) public titleImage?: FrameImageModel;
 
     static create(name: string, channel: ChannelModel, frames: FrameModel[]) {
         const model = new GameModel();
@@ -156,7 +157,11 @@ export class GameModel {
     }
 
     toApi(): API.Game {
-        return { name: this.name, frames: this.frames.map((frame) => frame.toApi()) };
+        return {
+            name: this.name,
+            titleImage: this.titleImage?.toApi(),
+            frames: this.frames.map((frame) => frame.toApi()),
+        };
     }
 }
 
