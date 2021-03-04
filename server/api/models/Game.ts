@@ -18,6 +18,10 @@ import {
     FrameFromJSON,
     FrameFromJSONTyped,
     FrameToJSON,
+    FrameImageData,
+    FrameImageDataFromJSON,
+    FrameImageDataFromJSONTyped,
+    FrameImageDataToJSON,
 } from './';
 
 /**
@@ -38,6 +42,12 @@ export interface Game {
      * @memberof Game
      */
     frames: Array<Frame>;
+    /**
+     * 
+     * @type {FrameImageData}
+     * @memberof Game
+     */
+    titleImage?: FrameImageData;
 }
 
 export function GameFromJSON(json: any): Game {
@@ -52,6 +62,7 @@ export function GameFromJSONTyped(json: any, ignoreDiscriminator: boolean): Game
         
         'name': json['name'],
         'frames': ((json['frames'] as Array<any>).map(FrameFromJSON)),
+        'titleImage': !exists(json, 'titleImage') ? undefined : FrameImageDataFromJSON(json['titleImage']),
     };
 }
 
@@ -66,6 +77,7 @@ export function GameToJSON(value?: Game | null): any {
         
         'name': value.name,
         'frames': ((value.frames as Array<any>).map(FrameToJSON)),
+        'titleImage': FrameImageDataToJSON(value.titleImage),
     };
 }
 

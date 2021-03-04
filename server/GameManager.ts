@@ -7,7 +7,7 @@ import { generateFakeWord } from 'fakelish';
 import { Bot, MessageContent, Bold, GameLogicError, Block } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
-import { ImageDecoder } from './ImageDecoder';
+import { ImageProcessor } from './ImageProcessor';
 import spacetime from 'spacetime';
 import Cfg from './Cfg';
 import fetch from 'node-fetch';
@@ -201,6 +201,7 @@ export class GameManager {
             );
 
             await this.db.putAvatar(newAvatar);
+            await cleanup();
         } finally {
             await this.unlink(path);
         }
@@ -219,8 +220,7 @@ export class GameManager {
             const fileWriteStream = await fs.createWriteStream('', { fd });
             await this.pipeToStream(blob, fileWriteStream);
 
-            const fileReadStream1 = await fs.createReadStream(path);
-            const { width, height } = await ImageDecoder.decodeImage(fileReadStream1);
+            const { width, height } = await ImageProcessor.decodeImage(path);
 
             const fileReadStream2 = await fs.createReadStream(path);
             const { fileName, fileUrl } = await ImageStore.uploadImage(gameName, frameId, fileReadStream2);
@@ -230,6 +230,7 @@ export class GameManager {
             await this.db.putGame(game);
             await this.updateAvatar(frame.person);
             await this.onFrameDone(game, frameIdx);
+            await cleanup();
         } finally {
             await this.unlink(path);
         }
@@ -239,10 +240,55 @@ export class GameManager {
         return `${this.urlBase}/game/${game.name}`;
     }
 
+    private static filterNotNull<T>(value: T | null | undefined): value is T {
+        return value !== null && value !== undefined;
+    }
+
+    private async createGameTitleImage(game: GameModel) {
+        // Pick a random image
+        const imageFrames = game.frames.map((frame) => frame.image).filter(GameManager.filterNotNull);
+
+        if (imageFrames.length < 0) {
+            return;
+        }
+
+        const image = imageFrames[Math.floor(Math.random() * imageFrames.length)];
+
+        const { fd, path, cleanup } = await makeTmpFile();
+        try {
+            // Fetch image
+            const fileWriteStream = await fs.createWriteStream('', { fd });
+            const frameImage = await fetch(image.imageUrl);
+            if (!frameImage.body) {
+                return; // No avatar body?
+            }
+
+            await this.pipeToStream(frameImage.body, fileWriteStream);
+
+            const titleImageData = await ImageProcessor.makeTitleImage(path);
+
+            const imageTitleReadStream = await fs.createReadStream(titleImageData.path);
+            const titleStoreData = await ImageStore.uploadImage(game.name, 'title-image', imageTitleReadStream);
+
+            game.titleImage = FrameImageModel.create(
+                titleStoreData.fileUrl,
+                titleStoreData.fileName,
+                titleImageData.width,
+                titleImageData.height
+            );
+
+            cleanup();
+        } finally {
+            this.unlink(path);
+        }
+    }
+
     private async onFrameDone(game: GameModel, frameIdx: number) {
         // If the game is over, mark the game model and tell everyone
         if (frameIdx + 1 >= game.frames.length) {
             game.isComplete = true;
+
+            await this.createGameTitleImage(game);
             await this.db.putGame(game);
             await this.sendMessage(game.channel, `Game `, Bold(game.name), ` is done!  ${this.getGameUrl(game)}`);
         }
