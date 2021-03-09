@@ -12,6 +12,7 @@ import Play from './Play';
 import PlayDone from './PlayDone';
 import Game from './Game';
 import About from './About';
+import GitHubIcon from './GitHubIcon';
 
 export default function () {
     return (
@@ -30,6 +31,12 @@ export default function () {
                     <LinkContainer to="/about" exact={true}>
                         <Nav.Link active={false}>About EPYC</Nav.Link>
                     </LinkContainer>
+                </Nav>
+
+                <Nav className="ml-auto">
+                    <Nav.Link href="https://github.com/matthewjamesadam/epyc">
+                        <GitHubIcon />
+                    </Nav.Link>
                 </Nav>
             </Navbar>
 
