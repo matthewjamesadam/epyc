@@ -62,11 +62,5 @@ function GameList(props: { games: Game[] | null }) {
 export default function () {
     const [isFetchingGames, games, gamesErr] = useAsyncActionOnce(() => EpycApi.getGames());
 
-    return (
-        <div>
-            <h1>EAT POOP YOU CAT</h1>
-
-            {isFetchingGames ? <Spinner /> : <GameList games={games} />}
-        </div>
-    );
+    return isFetchingGames ? <Spinner /> : <GameList games={games} />;
 }

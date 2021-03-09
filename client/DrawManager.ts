@@ -1,7 +1,6 @@
 import { CopyDataSource, CopySource, DrawOp, DrawTool, IDrawManager, ToolType } from './DrawTypes';
 import PencilTool from './PencilTool';
 import { makeObservable, observable } from 'mobx';
-import { ICanvasTarget } from './useCanvas';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
 import LineTool from './LineTool';
@@ -33,7 +32,7 @@ class FillImageOp implements DrawOp {
     }
 }
 
-export default class DrawManager implements IDrawManager, ICanvasTarget {
+export default class DrawManager implements IDrawManager {
     tools = [
         new PencilTool(this),
         new LineTool(this),

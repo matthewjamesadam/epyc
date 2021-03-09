@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Alert, Button, ButtonGroup, Card, Overlay, Popover, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
 import { DrawTool, ToolType } from './DrawTypes';
 import { observer } from 'mobx-react-lite';
-import { useCanvas } from './useCanvas';
 import DrawManager from './DrawManager';
 import { HexColorPicker } from 'react-colorful';
 import { useAsyncAction } from './useAsyncAction';
@@ -19,7 +18,10 @@ const rainbowStyle = {
 };
 
 function Draw(props: { gameName: string; frameId: string; title: string; onDone: () => void }) {
-    const [drawManager, canvasRef] = useCanvas(() => new DrawManager(props.gameName, props.frameId));
+    const [drawManager] = React.useState<DrawManager>(() => new DrawManager(props.gameName, props.frameId));
+    const canvasRef = React.useCallback((r) => {
+        drawManager.setCanvasRef(r);
+    }, []);
     const buttonTarget = React.useRef<HTMLButtonElement>(null);
     const [isStrokeColourOpen, setIsStrokeColourOpen] = React.useState(false);
 
@@ -154,12 +156,14 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         placement="top"
                     >
                         <Popover>
-                            <HexColorPicker
-                                color={drawManager?.strokeColour}
-                                onChange={(colour) => {
-                                    if (drawManager) drawManager.strokeColour = colour;
-                                }}
-                            />
+                            <div className="colour-picker">
+                                <HexColorPicker
+                                    color={drawManager?.strokeColour}
+                                    onChange={(colour) => {
+                                        if (drawManager) drawManager.strokeColour = colour;
+                                    }}
+                                />
+                            </div>
                         </Popover>
                     </Overlay>
 
@@ -205,7 +209,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
 
                 <div>
                     <Button onClick={uploadImage} disabled={isUploadingImage}>
-                        Done!!!
+                        Done!
                     </Button>
 
                     {uploadImageError && (

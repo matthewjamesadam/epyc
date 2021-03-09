@@ -3,6 +3,7 @@ import { Card, Col, Row, Spinner } from 'react-bootstrap';
 import { EpycApi, Frame, Game, Person } from './Apis';
 import Error404 from './Error404';
 import { useAsyncActionOnce } from './useAsyncAction';
+import { ResizingImg } from './ResizingImg';
 
 function GameFrameAvatar(props: { person: Person }) {
     const avatar = props.person.avatar;
@@ -30,15 +31,9 @@ function GameFrame(props: { idx: number; frame: Frame }) {
     if (props.frame.playData.title) {
         content = props.frame.playData.title;
     } else if (props.frame.playData.image) {
-        const style: React.CSSProperties = {
-            maxWidth: '100%',
-            height: 'auto',
-            objectFit: 'contain',
-        };
         content = (
-            <img
+            <ResizingImg
                 src={props.frame.playData.image.imageUrl}
-                style={style}
                 width={props.frame.playData.image.width}
                 height={props.frame.playData.image.height}
             />
