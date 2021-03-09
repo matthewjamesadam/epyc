@@ -315,10 +315,9 @@ export class GameManager {
     async sendFrameMessage(game: GameModel, frame: FrameModel) {
         this.getBotTarget(frame.person.target).sendDM(
             frame.person,
-            `It's your turn to play Eat Poop You Cat!\nYou can go here to play your turn: ${this.getFramePlayUrl(
-                game,
-                frame
-            )}`
+            `It's your turn to play Eat Poop You Cat on game `,
+            Bold(game.name),
+            `!  You have two days to play your turn.\nYou can go here to play: ${this.getFramePlayUrl(game, frame)}`
         );
     }
 
@@ -483,7 +482,7 @@ export class GameManager {
             frame.person,
             'This is a reminder to play your turn on game ',
             Bold(game.name),
-            '!\n',
+            ' in the next day!\n',
             `You can go here to play your turn: ${this.getFramePlayUrl(game, frame)}`
         );
     }
