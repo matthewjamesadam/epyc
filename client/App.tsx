@@ -2,7 +2,7 @@ import * as ReactDOM from 'react-dom';
 import * as React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import Main from './Main';
-import 'react-colorful/dist/index.css';
+
 import './styles.scss';
 
 interface Props {}

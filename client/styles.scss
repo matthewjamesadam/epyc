@@ -1,5 +1,3 @@
-// @import 'bootstrap/scss/bootstrap';
-
 @import 'bootstrap/scss/functions';
 @import 'bootstrap/scss/variables';
 @import 'bootstrap/scss/mixins';
@@ -10,15 +8,14 @@
 @import 'node_modules/bootstrap/scss/grid';
 
 @import 'node_modules/bootstrap/scss/buttons';
-// @import 'node_modules/bootstrap/scss/nav';
-// @import 'node_modules/bootstrap/scss/navbar';
+@import 'node_modules/bootstrap/scss/nav';
+@import 'node_modules/bootstrap/scss/navbar';
 
 @import 'node_modules/bootstrap/scss/popover';
 
 @import 'node_modules/bootstrap/scss/forms';
 @import 'node_modules/bootstrap/scss/card';
 @import 'node_modules/bootstrap/scss/alert';
-// @import 'node_modules/bootstrap/scss/list-group';
 @import 'node_modules/bootstrap/scss/spinners';
 
 @import 'node_modules/bootstrap/scss/button-group';
@@ -40,11 +37,24 @@
 /*
     For colour picker controls
 */
-.react-colorful__saturation {
+.colour-picker .react-colorful__saturation {
     border-radius: 0.23rem 0.23rem 0 0;
     box-shadow: none;
 }
 
-.react-colorful__last-control {
+.colour-picker .react-colorful__last-control {
     border-radius: 0 0 0.23rem 0.23rem;
+}
+
+/*
+
+*/
+.about-quote-person {
+    font-size: 6rem;
+}
+
+@include media-breakpoint-down(sm) {
+    .about-quote-person {
+        font-size: 3.5rem;
+    }
 }
