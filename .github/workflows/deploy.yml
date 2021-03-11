@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - ec2test
 
 env:
   NODE_VERSION: '14.x' # set this to the node version to use
