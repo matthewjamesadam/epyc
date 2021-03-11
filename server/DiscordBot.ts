@@ -60,12 +60,12 @@ export class DiscordBot extends Bot {
             return;
         }
 
-        (discordChannel as TextChannel).send(content);
+        await (discordChannel as TextChannel).send(content);
     }
 
     protected async sendStringDM(person: PersonModel, content: string): Promise<void> {
         let discordPerson = await this.client.users.fetch(person.id);
-        discordPerson.send(content);
+        await discordPerson.send(content);
     }
 
     protected toBold(content: string): string {
