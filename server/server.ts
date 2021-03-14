@@ -77,10 +77,6 @@ let bootup = async () => {
         await startServer(db, gameManagerProvider);
 
         gameManagerProvider._gameManager = new GameManager(db, discordBot);
-
-        // console.log('Running migration');
-        // await db.runPersonMigration();
-        // console.log('Done running migration');
     } catch (e) {
         console.error(`Error occurred on startup: ${e}`);
     }
