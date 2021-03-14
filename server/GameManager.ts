@@ -147,7 +147,7 @@ export class GameManager {
 
         await this.db.putGame(game);
         await this.updateAvatar(person);
-        await this.onFrameDone(game, frameIdx, person);
+        await this.onFrameDone(game, frameIdx);
     }
 
     private async pipeToStream(input: NodeJS.ReadableStream, output: NodeJS.WritableStream): Promise<void> {
@@ -245,7 +245,7 @@ export class GameManager {
 
             await this.db.putGame(game);
             await this.updateAvatar(person);
-            await this.onFrameDone(game, frameIdx, person);
+            await this.onFrameDone(game, frameIdx);
             await cleanup();
         } finally {
             await this.unlink(path);
@@ -299,7 +299,7 @@ export class GameManager {
         }
     }
 
-    private async onFrameDone(game: GameModel, frameIdx: number, person: PersonModel | undefined) {
+    private async onFrameDone(game: GameModel, frameIdx: number) {
         // If the game is over, mark the game model and tell everyone
         if (frameIdx + 1 >= game.frames.length) {
             game.isComplete = true;
@@ -318,7 +318,7 @@ export class GameManager {
             await this.sendMessage(
                 game.channel,
                 `It is now `,
-                Bold(person?.name || '??'),
+                Bold(nextPerson?.name || '??'),
                 `'s turn for game `,
                 Bold(game.name),
                 `.`
@@ -439,7 +439,7 @@ export class GameManager {
 
         game.frames.splice(frameIdx, 1);
         await this.db.putGame(game);
-        await this.onFrameDone(game, frameIdx - 1, person);
+        await this.onFrameDone(game, frameIdx - 1);
     }
 
     // async shuffleGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
@@ -489,7 +489,7 @@ export class GameManager {
             // Drop this person from the game
             game.frames.splice(incompleteFrameIdx, 1);
             await this.db.putGame(game);
-            await this.onFrameDone(game, incompleteFrameIdx - 1, person);
+            await this.onFrameDone(game, incompleteFrameIdx - 1);
 
             if (person) {
                 await this.getBotTarget(person.target).sendDM(
