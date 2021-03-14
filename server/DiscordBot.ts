@@ -1,5 +1,5 @@
 import Discord, { TextChannel } from 'discord.js';
-import { Bot, PersonAvatar } from './Bot';
+import { Bot, PersonAvatar, PersonRef } from './Bot';
 import { BotTarget, ChannelModel, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
 
@@ -44,11 +44,11 @@ export class DiscordBot extends Bot {
     processDiscordMessage(message: Discord.Message) {
         let channelName = message.channel.type === 'text' ? message.channel.name : '';
         const channel = ChannelModel.create(message.channel.id, channelName, BotTarget.discord);
-        const person = PersonModel.create(message.author.id, message.author.username, BotTarget.discord);
+        const person = { id: message.author.id, target: BotTarget.discord, name: message.author.username };
 
-        const mentions: Array<PersonModel> = message.mentions.users
+        const mentions: Array<PersonRef> = message.mentions.users
             .filter((user) => user.id !== this.client.user?.id)
-            .map((user) => PersonModel.create(user.id, user.username, BotTarget.discord));
+            .map((user) => ({ id: message.author.id, target: BotTarget.discord, name: message.author.username }));
 
         this.processMessage(channel, person, message.cleanContent, mentions);
     }
@@ -64,7 +64,7 @@ export class DiscordBot extends Bot {
     }
 
     protected async sendStringDM(person: PersonModel, content: string): Promise<void> {
-        let discordPerson = await this.client.users.fetch(person.id);
+        let discordPerson = await this.client.users.fetch(person.serviceId);
         await discordPerson.send(content);
     }
 
@@ -77,7 +77,7 @@ export class DiscordBot extends Bot {
     }
 
     async getAvatar(person: PersonModel): Promise<PersonAvatar | undefined> {
-        const discordPerson = await this.client.users.fetch(person.id);
+        const discordPerson = await this.client.users.fetch(person.serviceId);
         const url = discordPerson.avatarURL({ format: 'png', size: 64 });
         if (!url) {
             return undefined;

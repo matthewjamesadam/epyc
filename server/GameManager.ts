@@ -4,7 +4,7 @@ import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
 import { Db } from './Db';
 import { generateFakeWord } from 'fakelish';
-import { Bot, MessageContent, Bold, GameLogicError, Block } from './Bot';
+import { Bot, MessageContent, Bold, GameLogicError, Block, PersonRef } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageProcessor } from './ImageProcessor';
@@ -34,14 +34,36 @@ export class GameManager {
         this.urlBase = Cfg.baseWebPath;
     }
 
-    async startGame(players: Array<PersonModel>, channel: ChannelModel): Promise<void> {
+    private async resolvePerson(person: PersonRef): Promise<PersonModel> {
+        const dbPerson = await this.db.getPersonFromService(person.id, person.target);
+        if (dbPerson) {
+            return dbPerson;
+        }
+
+        const newPerson = PersonModel.create(person.id, person.name, person.target);
+        await this.db.putPerson(newPerson);
+        return newPerson;
+    }
+
+    private async resolvePersons(persons: PersonRef[]): Promise<PersonModel[]> {
+        const models: PersonModel[] = [];
+
+        for (const person of persons) {
+            models.push(await this.resolvePerson(person));
+        }
+        return models;
+    }
+
+    async startGame(players: PersonRef[], channel: ChannelModel): Promise<void> {
+        const persons = await this.resolvePersons(players);
+
         // Collect people
-        const frames: Array<FrameModel> = players.map((player) => FrameModel.create(player));
+        const frames: Array<FrameModel> = persons.map((person) => FrameModel.create(person.id));
 
         // FIXME -- for dev testing -- remove at some point!
         if (!Cfg.isProduction) {
             while (frames.length < 4) {
-                frames.push(frames[0]);
+                frames.push(FrameModel.create(frames[0].personId));
             }
         }
 
@@ -60,7 +82,7 @@ export class GameManager {
             throw new GameLogicError('Could not create game');
         }
 
-        let firstPerson = frames[0].person;
+        let firstPerson = persons[0];
 
         this.sendMessage(
             channel,
@@ -70,7 +92,7 @@ export class GameManager {
             Bold(firstPerson.name),
             `'s turn.`
         );
-        this.sendFrameMessage(game, frames[0]);
+        this.sendFrameMessage(game, frames[0], firstPerson);
     }
 
     private async getFrameData(
@@ -114,6 +136,7 @@ export class GameManager {
 
     async playTitleTurn(gameName: string, frameId: string, title: string) {
         const { game, frameIdx, frame, parentFrame } = await this.getFrameData(gameName, frameId);
+        const person = await this.db.getPerson(frame.personId);
 
         if (parentFrame?.title || (parentFrame && !parentFrame.image)) {
             throw new Error('Previous turn state is inconsistent');
@@ -123,8 +146,8 @@ export class GameManager {
         game.frames[frameIdx] = frame;
 
         await this.db.putGame(game);
-        await this.updateAvatar(frame.person);
-        await this.onFrameDone(game, frameIdx);
+        await this.updateAvatar(person);
+        await this.onFrameDone(game, frameIdx, person);
     }
 
     private async pipeToStream(input: NodeJS.ReadableStream, output: NodeJS.WritableStream): Promise<void> {
@@ -147,11 +170,12 @@ export class GameManager {
         });
     }
 
-    private async updateAvatar(person: PersonModel) {
-        const [dbAvatar, botAvatar] = await Promise.all([
-            this.db.getAvatar(person.id, person.target),
-            this.getBotTarget(person.target).getAvatar(person),
-        ]);
+    private async updateAvatar(person: PersonModel | undefined) {
+        if (!person) {
+            return; // No person to update
+        }
+
+        const botAvatar = await this.getBotTarget(person.target).getAvatar(person);
 
         if (!botAvatar) {
             return; // Nothing to update
@@ -159,7 +183,7 @@ export class GameManager {
 
         const lastValid = spacetime().subtract(1, 'month');
 
-        if (dbAvatar && spacetime(dbAvatar.lastUpdated).isAfter(lastValid)) {
+        if (person.avatar && spacetime(person.avatar.lastUpdated).isAfter(lastValid)) {
             return; // Nothing to update
         }
 
@@ -180,27 +204,18 @@ export class GameManager {
             this.pipeToStream(fileReadStream1, cryptoStream);
             const hash = cryptoStream.digest('hex');
 
-            if (hash === dbAvatar?.hash) {
+            if (hash === person.avatar?.hash) {
                 return; // Same avatar as before
             }
-
-            const id = dbAvatar?.id || uuid();
-
             const fileReadStream2 = await fs.createReadStream(path);
 
-            const { fileName, fileUrl } = await ImageStore.uploadAvatar(id, fileReadStream2);
+            const { fileName, fileUrl } = await ImageStore.uploadAvatar(person.id, fileReadStream2);
 
-            const newAvatar = AvatarModel.create(
-                id,
-                person.id,
-                person.target,
-                fileUrl,
-                botAvatar.width,
-                botAvatar.height,
-                hash
-            );
+            const newAvatar = AvatarModel.create(fileUrl, botAvatar.width, botAvatar.height, hash);
 
-            await this.db.putAvatar(newAvatar);
+            person.avatar = newAvatar;
+
+            await this.db.putPerson(person);
             await cleanup();
         } finally {
             await this.unlink(path);
@@ -209,6 +224,7 @@ export class GameManager {
 
     async playImageTurn(gameName: string, frameId: string, blob: Readable) {
         const { game, frameIdx, frame, parentFrame } = await this.getFrameData(gameName, frameId);
+        const person = await this.db.getPerson(frame.personId);
 
         if (parentFrame?.image || (parentFrame && !parentFrame.title)) {
             throw new Error('Previous turn state is inconsistent');
@@ -228,8 +244,8 @@ export class GameManager {
             frame.image = FrameImageModel.create(fileUrl, fileName, width, height);
 
             await this.db.putGame(game);
-            await this.updateAvatar(frame.person);
-            await this.onFrameDone(game, frameIdx);
+            await this.updateAvatar(person);
+            await this.onFrameDone(game, frameIdx, person);
             await cleanup();
         } finally {
             await this.unlink(path);
@@ -283,7 +299,7 @@ export class GameManager {
         }
     }
 
-    private async onFrameDone(game: GameModel, frameIdx: number) {
+    private async onFrameDone(game: GameModel, frameIdx: number, person: PersonModel | undefined) {
         // If the game is over, mark the game model and tell everyone
         if (frameIdx + 1 >= game.frames.length) {
             game.isComplete = true;
@@ -296,11 +312,13 @@ export class GameManager {
         // Game's not over yet -- tell the next player
         else {
             const nextFrame = game.frames[frameIdx + 1];
-            await this.sendFrameMessage(game, nextFrame);
+            const nextPerson = await this.db.getPerson(nextFrame.personId);
+
+            await this.sendFrameMessage(game, nextFrame, nextPerson);
             await this.sendMessage(
                 game.channel,
                 `It is now `,
-                Bold(nextFrame.person.name),
+                Bold(person?.name || '??'),
                 `'s turn for game `,
                 Bold(game.name),
                 `.`
@@ -312,9 +330,13 @@ export class GameManager {
         return `${this.urlBase}/play/${game.name}/${frame.id}`;
     }
 
-    async sendFrameMessage(game: GameModel, frame: FrameModel) {
-        this.getBotTarget(frame.person.target).sendDM(
-            frame.person,
+    async sendFrameMessage(game: GameModel, frame: FrameModel, person: PersonModel | undefined) {
+        if (!person) {
+            return;
+        }
+
+        this.getBotTarget(person.target).sendDM(
+            person,
             `It's your turn to play Eat Poop You Cat on game `,
             Bold(game.name),
             `!  You have two days to play your turn.\nYou can go here to play: ${this.getFramePlayUrl(game, frame)}`
@@ -347,7 +369,7 @@ export class GameManager {
             return;
         }
 
-        const gameMessages: MessageContent = games.flatMap((game) => {
+        const messagePromises: Promise<MessageContent>[] = games.map(async (game) => {
             const nextFrameIdx = game.frames.findIndex((frame) => !frame.image && !frame.title);
             if (nextFrameIdx < 0) {
                 return []; // Should never happen
@@ -355,20 +377,23 @@ export class GameManager {
             const nextFrame = game.frames[nextFrameIdx];
             const turnsComplete = nextFrameIdx;
             const turnsLeft = game.frames.length - nextFrameIdx;
+            const person = await this.db.getPerson(nextFrame.personId);
+
             return [
                 '\n',
                 Bold(game.name),
                 ': Waiting on ',
-                Bold(nextFrame.person.name),
+                Bold(person?.name || '??'),
                 `.  ${turnsComplete} turns completed, ${turnsLeft} remaining.`,
             ];
         });
 
-        this.sendMessage(channel, 'The following games are in progress:', ...gameMessages);
+        const gameMessages = (await Promise.all(messagePromises)).flatMap((messages) => messages);
+        await this.sendMessage(channel, 'The following games are in progress:', ...gameMessages);
     }
 
-    async joinGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
-        const game = await this.db.getGame(gameName);
+    async joinGame(channel: ChannelModel, personRef: PersonRef, gameName: string): Promise<void> {
+        const [game, person] = await Promise.all([this.db.getGame(gameName), this.resolvePerson(personRef)]);
 
         if (!game) {
             throw new GameLogicError('Game ', Bold(gameName), ' does not exist');
@@ -378,18 +403,21 @@ export class GameManager {
             throw new GameLogicError('Game ', Bold(gameName), ' is already complete');
         }
 
-        if (game.frames.find((frame) => frame.person.equals(person))) {
+        if (game.frames.find((frame) => frame.personId === person.id)) {
             throw new GameLogicError('You are already in game ', Bold(gameName));
         }
 
-        game.frames.push(FrameModel.create(person));
+        game.frames.push(FrameModel.create(person.id));
         await this.db.putGame(game);
 
         this.sendMessage(channel, 'OK ', Bold(person.name), ', you are now in game ', Bold(gameName));
     }
 
-    async leaveGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
-        const game = await this.db.getGame(gameName);
+    async leaveGame(channel: ChannelModel, personRef: PersonRef, gameName: string): Promise<void> {
+        const [game, person] = await Promise.all([
+            this.db.getGame(gameName),
+            this.db.getPersonFromService(personRef.id, personRef.target),
+        ]);
 
         if (!game) {
             throw new GameLogicError('Game ', Bold(gameName), ' does not exist');
@@ -399,7 +427,7 @@ export class GameManager {
             throw new GameLogicError('Game ', Bold(gameName), ' is already complete');
         }
 
-        const frameIdx = game.frames.findIndex((frame) => frame.person.equals(person));
+        const frameIdx = game.frames.findIndex((frame) => frame.personId === person?.id);
 
         if (frameIdx === -1) {
             throw new GameLogicError('You are not in game ', Bold(gameName));
@@ -411,7 +439,7 @@ export class GameManager {
 
         game.frames.splice(frameIdx, 1);
         await this.db.putGame(game);
-        await this.onFrameDone(game, frameIdx - 1);
+        await this.onFrameDone(game, frameIdx - 1, person);
     }
 
     // async shuffleGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
@@ -453,6 +481,7 @@ export class GameManager {
         }
 
         const frame = game.frames[incompleteFrameIdx];
+        const person = await this.db.getPerson(frame.personId);
 
         const warnings = frame.warnings || 0;
 
@@ -460,16 +489,18 @@ export class GameManager {
             // Drop this person from the game
             game.frames.splice(incompleteFrameIdx, 1);
             await this.db.putGame(game);
-            await this.onFrameDone(game, incompleteFrameIdx - 1);
+            await this.onFrameDone(game, incompleteFrameIdx - 1, person);
 
-            await this.getBotTarget(frame.person.target).sendDM(
-                frame.person,
-                'Oh no!  You took too long to play your turn on game ',
-                Bold(game.name),
-                '!\n',
-                `If you'd like to re-join the game, you can use the command `,
-                Block(`@epyc join ${game.name}`)
-            );
+            if (person) {
+                await this.getBotTarget(person.target).sendDM(
+                    person,
+                    'Oh no!  You took too long to play your turn on game ',
+                    Bold(game.name),
+                    '!\n',
+                    `If you'd like to re-join the game, you can use the command `,
+                    Block(`@epyc join ${game.name}`)
+                );
+            }
 
             return;
         }
@@ -478,13 +509,15 @@ export class GameManager {
         frame.warnings = warnings + 1;
         await this.db.putGame(game);
 
-        await this.getBotTarget(frame.person.target).sendDM(
-            frame.person,
-            'This is a reminder to play your turn on game ',
-            Bold(game.name),
-            ' in the next day!\n',
-            `You can go here to play your turn: ${this.getFramePlayUrl(game, frame)}`
-        );
+        if (person) {
+            await this.getBotTarget(person.target).sendDM(
+                person,
+                'This is a reminder to play your turn on game ',
+                Bold(game.name),
+                ' in the next day!\n',
+                `You can go here to play your turn: ${this.getFramePlayUrl(game, frame)}`
+            );
+        }
     }
 
     async notifyPlayers(): Promise<void> {

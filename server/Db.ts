@@ -28,28 +28,14 @@ export class ChannelModel {
 }
 
 export class AvatarModel {
-    @Serialize({ name: '_id' }) public id: string = '';
-    @Serialize() public personId: string = '';
-    @Serialize() public target: BotTarget = BotTarget.discord;
     @Serialize() public url: string = '';
     @Serialize() public width: number = 0;
     @Serialize() public height: number = 0;
     @Serialize() public hash: string = '';
     @SerializeDate() public lastUpdated: Date = new Date();
 
-    static create(
-        id: string,
-        personId: string,
-        target: BotTarget,
-        url: string,
-        width: number,
-        height: number,
-        hash: string
-    ): AvatarModel {
+    static create(url: string, width: number, height: number, hash: string): AvatarModel {
         const model = new AvatarModel();
-        model.id = id;
-        model.personId = personId;
-        model.target = target;
         model.url = url;
         model.width = width;
         model.height = height;
@@ -67,24 +53,26 @@ export class AvatarModel {
 }
 
 export class PersonModel {
-    @Serialize() public id: string = '';
+    @Serialize({ name: '_id' }) public id: string = '';
     @Serialize() public name: string = '';
+    @Serialize() public serviceId: string = '';
     @Serialize() public target: BotTarget = BotTarget.discord;
+    @Serialize({ optional: true }) public avatar?: AvatarModel;
 
-    static create(id: string, name: string, target: BotTarget) {
+    static create(serviceId: string, name: string, target: BotTarget) {
         const model = new PersonModel();
-        model.id = id;
+        model.id = uuid();
+        model.serviceId = serviceId;
         model.name = name;
         model.target = target;
         return model;
     }
 
-    equals(other: PersonModel) {
-        return this.id === other.id && this.target === other.target;
-    }
-
     toApi(): API.Person {
-        return { name: this.name };
+        return {
+            name: this.name,
+            avatar: this.avatar?.toApi(),
+        };
     }
 }
 
@@ -114,15 +102,15 @@ export class FrameImageModel {
 
 export class FrameModel {
     @Serialize() public id: string = '';
-    @Serialize() public person: PersonModel = new PersonModel();
+    @Serialize() public personId: string = '';
     @Serialize({ optional: true }) public title?: string;
     @Serialize({ optional: true }) public image?: FrameImageModel;
     @Serialize({ optional: true }) public warnings?: number;
 
-    static create(person: PersonModel) {
+    static create(personId: string) {
         const model = new FrameModel();
         model.id = uuid();
-        model.person = person;
+        model.personId = personId;
         return model;
     }
 
@@ -132,7 +120,7 @@ export class FrameModel {
 
     toApi(): API.Frame {
         return {
-            person: this.person.toApi(),
+            person: { name: '' }, // Person has to be attached from the Person collection
             playData: {
                 title: this.title,
                 image: this.image?.toApi(),
@@ -165,10 +153,103 @@ export class GameModel {
     }
 }
 
+export class OldPersonModel {
+    @Serialize() public id: string = '';
+    @Serialize() public name: string = '';
+    @Serialize() public target: BotTarget = BotTarget.discord;
+
+    static create(id: string, name: string, target: BotTarget) {
+        const model = new OldPersonModel();
+        model.id = id;
+        model.name = name;
+        model.target = target;
+        return model;
+    }
+
+    equals(other: OldPersonModel) {
+        return this.id === other.id && this.target === other.target;
+    }
+}
+
+export class OldFrameModel {
+    @Serialize() public id: string = '';
+    @Serialize() public person: OldPersonModel = new OldPersonModel();
+    @Serialize({ optional: true }) public title?: string;
+    @Serialize({ optional: true }) public image?: FrameImageModel;
+    @Serialize({ optional: true }) public warnings?: number;
+
+    static create(person: OldPersonModel) {
+        const model = new OldFrameModel();
+        model.id = uuid();
+        model.person = person;
+        return model;
+    }
+
+    get isComplete(): boolean {
+        return !!this.title || !!this.image;
+    }
+}
+
+export class OldGameModel {
+    @Serialize({ name: '_id' }) public name: string = '';
+    @Serialize() public isComplete: boolean = false;
+    @Serialize() public channel: ChannelModel = new ChannelModel();
+    @SerializeArray(OldFrameModel) public frames: OldFrameModel[] = [];
+    @Serialize({ optional: true }) public titleImage?: FrameImageModel;
+
+    static create(name: string, channel: ChannelModel, frames: OldFrameModel[]) {
+        const model = new OldGameModel();
+        model.name = name;
+        model.channel = channel;
+        model.frames = frames;
+        return model;
+    }
+}
+
+export class OldAvatarModel {
+    @Serialize({ name: '_id' }) public id: string = '';
+    @Serialize() public personId: string = '';
+    @Serialize() public target: BotTarget = BotTarget.discord;
+    @Serialize() public url: string = '';
+    @Serialize() public width: number = 0;
+    @Serialize() public height: number = 0;
+    @Serialize() public hash: string = '';
+    @SerializeDate() public lastUpdated: Date = new Date();
+
+    static create(
+        id: string,
+        personId: string,
+        target: BotTarget,
+        url: string,
+        width: number,
+        height: number,
+        hash: string
+    ): AvatarModel {
+        const model = new OldAvatarModel();
+        model.id = id;
+        model.personId = personId;
+        model.target = target;
+        model.url = url;
+        model.width = width;
+        model.height = height;
+        model.hash = hash;
+        return model;
+    }
+
+    toApi(): API.Avatar {
+        return {
+            url: this.url,
+            width: this.width,
+            height: this.height,
+        };
+    }
+}
+
 export class Db {
     client: MongoDb.MongoClient;
     game: MongoDb.Collection;
     avatar: MongoDb.Collection;
+    person: MongoDb.Collection;
 
     static async create(): Promise<Db> {
         const connectionString = process.env['DB_CONNECTION_STRING'];
@@ -189,11 +270,17 @@ export class Db {
         const db = this.client.db(Cfg.dbName);
         this.game = db.collection('Game');
         this.avatar = db.collection('Avatar');
+        this.person = db.collection('Person');
     }
 
     private async init() {
         await this.avatar.createIndex({
             personId: 1,
+            target: 1,
+        });
+
+        await this.person.createIndex({
+            serviceId: 1,
             target: 1,
         });
     }
@@ -229,17 +316,25 @@ export class Db {
         return inflate(GameModel, doc);
     }
 
-    async putAvatar(avatar: AvatarModel): Promise<void> {
-        const doc = deflate(avatar);
-        await this.avatar.replaceOne({ personId: avatar.personId, target: avatar.target }, doc, { upsert: true });
-    }
-
-    async getAvatar(personId: string, target: BotTarget): Promise<AvatarModel | undefined> {
-        const doc = await this.avatar.findOne({ personId, target });
+    async getPerson(id: string): Promise<PersonModel | undefined> {
+        const doc = await this.person.findOne({ _id: id });
         if (doc) {
-            return inflate(AvatarModel, doc);
+            return inflate(PersonModel, doc);
         }
         return undefined;
+    }
+
+    async getPersonFromService(serviceId: string, target: BotTarget): Promise<PersonModel | undefined> {
+        const doc = await this.person.findOne({ serviceId, target });
+        if (doc) {
+            return inflate(PersonModel, doc);
+        }
+        return undefined;
+    }
+
+    async putPerson(person: PersonModel): Promise<void> {
+        const doc = deflate(person);
+        await this.person.replaceOne({ _id: person.id }, doc, { upsert: true });
     }
 
     private inflateArray<Type>(docs: any[], type: Constructor<Type>): Type[] {
@@ -255,5 +350,64 @@ export class Db {
 
     private deflateArray<Type>(objs: Type[]): any[] {
         return objs.map((obj) => deflate(obj));
+    }
+
+    private async getOldAvatar(personId: string, target: BotTarget): Promise<OldAvatarModel | undefined> {
+        const doc = await this.avatar.findOne({ personId, target });
+        if (doc) {
+            return inflate(OldAvatarModel, doc);
+        }
+        return undefined;
+    }
+
+    private async convertFrame(frame: OldFrameModel): Promise<FrameModel> {
+        const personDoc = await this.person.findOne({ serviceId: frame.person.id, target: frame.person.target });
+        let person = inflate(PersonModel, personDoc);
+
+        // Matching person, return it
+        if (!person) {
+            console.log(`Creating new person: ${frame.person.name}`);
+
+            // No matching person, make one
+            person = PersonModel.create(frame.person.id, frame.person.name, frame.person.target);
+            person.avatar = await this.getOldAvatar(frame.person.id, frame.person.target);
+
+            this.putPerson(person);
+        }
+
+        const newFrame = new FrameModel();
+        newFrame.id = frame.id;
+        newFrame.image = frame.image;
+        newFrame.personId = person.id;
+        newFrame.title = frame.title;
+        newFrame.warnings = frame.warnings;
+
+        return newFrame;
+    }
+
+    private async convertGame(oldGame: OldGameModel) {
+        const frames = new Array<FrameModel>();
+
+        for (const oldFrame of oldGame.frames) {
+            const frame = await this.convertFrame(oldFrame);
+            frames.push(frame);
+        }
+
+        const game = GameModel.create(oldGame.name, oldGame.channel, frames);
+
+        game.isComplete = oldGame.isComplete;
+        game.titleImage = oldGame.titleImage;
+        return game;
+    }
+
+    async runPersonMigration() {
+        const docs = await this.game.find().toArray();
+        const games = this.inflateArray<OldGameModel>(docs, OldGameModel);
+
+        for (const oldGame of games) {
+            const game = await this.convertGame(oldGame);
+
+            await this.putGame(game);
+        }
     }
 }
