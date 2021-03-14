@@ -4,6 +4,7 @@ import {
     Context,
     HttpError,
     Person,
+    Frame,
     Game,
     GetFramePlayDataParams,
     GetGameParams,
@@ -21,8 +22,18 @@ export class EpycApi extends EpycApiBase {
     }
 
     async getGames(context: Context): Promise<Array<Game>> {
-        const gameModels = await this.db.getGames();
-        return gameModels.filter((model) => model.isComplete).map((model) => model.toApi());
+        const gameModels = (await this.db.getGames()).filter((game) => game.isComplete);
+
+        // Don't return frames
+        const games: Game[] = gameModels.map((game) => {
+            return {
+                name: game.name,
+                frames: [],
+                titleImage: game.titleImage?.toApi(),
+            };
+        });
+
+        return games;
     }
 
     async getGame(params: GetGameParams, context: Context): Promise<Game> {
@@ -33,14 +44,15 @@ export class EpycApi extends EpycApiBase {
 
         const game = model.toApi();
 
-        // Attach avatars
-        const fetchAvatars = model.frames.map(async (frame, idx) => {
-            const avatar = await this.db.getAvatar(frame.person.id, frame.person.target);
-            game.frames[idx].person.avatar = avatar?.toApi();
+        // Attach Persons
+        const fetchPersons = model.frames.map(async (frame, idx) => {
+            const person = await this.db.getPerson(frame.personId);
+            if (person) {
+                game.frames[idx].person = person.toApi();
+            }
         });
 
-        await Promise.all(fetchAvatars);
-
+        await Promise.all(fetchPersons);
         return game;
     }
 

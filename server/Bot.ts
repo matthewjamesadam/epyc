@@ -1,4 +1,4 @@
-import { ChannelModel, PersonModel } from './Db';
+import { BotTarget, ChannelModel, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
 
 enum MessageStyle {
@@ -30,7 +30,7 @@ export function Block(message: string): Message {
     };
 }
 
-type MessageChunk = Message | string;
+export type MessageChunk = Message | string;
 export type MessageContent = MessageChunk[];
 
 const helpMessage: MessageContent = [
@@ -86,6 +86,12 @@ export interface PersonAvatar {
     height: number;
 }
 
+export interface PersonRef {
+    id: string;
+    target: BotTarget;
+    name: string;
+}
+
 export abstract class Bot {
     protected abstract sendStringMessage(channel: ChannelModel, content: string): Promise<void>;
     protected abstract sendStringDM(person: PersonModel, content: string): Promise<void>;
@@ -128,7 +134,7 @@ export abstract class Bot {
         return this.sendStringDM(person, stringContent);
     }
 
-    async processMessage(channel: ChannelModel, person: PersonModel, message: string, mentions: PersonModel[]) {
+    async processMessage(channel: ChannelModel, person: PersonRef, message: string, mentions: PersonRef[]) {
         let allItems = message.split(' ');
 
         if (allItems.length < 2) {
@@ -183,16 +189,11 @@ export abstract class Bot {
         this.sendMessage(channel, '🧐 huh?  Try ', Block('@epyc help'), ' for help.');
     }
 
-    private async startGame(channel: ChannelModel, players: PersonModel[]) {
-        // FIXME remove
-        while (players.length < 4) {
-            players.push(players[0]);
-        }
-
+    private async startGame(channel: ChannelModel, players: PersonRef[]) {
         await this.gameManager.gameManager.startGame(players, channel);
     }
 
-    private async onJoin(channel: ChannelModel, person: PersonModel, allItems: string[]) {
+    private async onJoin(channel: ChannelModel, person: PersonRef, allItems: string[]) {
         if (allItems.length < 3) {
             return this.printHelpMessage(channel);
         }
@@ -200,7 +201,7 @@ export abstract class Bot {
         await this.gameManager.gameManager.joinGame(channel, person, allItems[2]);
     }
 
-    private async onLeave(channel: ChannelModel, person: PersonModel, allItems: string[]) {
+    private async onLeave(channel: ChannelModel, person: PersonRef, allItems: string[]) {
         if (allItems.length < 3) {
             return this.printHelpMessage(channel);
         }
