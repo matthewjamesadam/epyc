@@ -7,11 +7,20 @@ import expressStaticGzip from 'express-static-gzip';
 import CookieParser from 'cookie-parser';
 import { DiscordBot } from './DiscordBot';
 import { GameManager, GameManagerProvider } from './GameManager';
+import { SlackBot } from './SlackBot';
 
 let startDiscord = async (gameManager: GameManagerProvider): Promise<DiscordBot> => {
     console.log('*** Starting Discord Bot');
 
     let bot = new DiscordBot(gameManager);
+    await bot.init();
+    return bot;
+};
+
+let startSlack = async (db: Db, gameManager: GameManagerProvider): Promise<SlackBot> => {
+    console.log('*** Starting Slack Bot');
+
+    let bot = new SlackBot(db, gameManager);
     await bot.init();
     return bot;
 };
@@ -23,7 +32,7 @@ let startDb = async () => {
     return db;
 };
 
-let startServer = async (db: Db, gameManagerProvider: GameManagerProvider) => {
+let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slackBot: SlackBot) => {
     console.log('*** Starting Server');
 
     let corsDomains = new Set<string>(['http://epyc.phlegmatic.ca', 'https://epyc.phlegmatic.ca']);
@@ -46,6 +55,11 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider) => {
     const app = Express();
 
     app.use(Express.json());
+
+    const slackMiddleware = slackBot.requestListener;
+    if (slackMiddleware) {
+        app.use('/slack/events', slackMiddleware);
+    }
 
     app.use('/api', corsMiddleware);
     app.use(CookieParser());
@@ -74,9 +88,10 @@ let bootup = async () => {
 
         const db = await startDb();
         const discordBot = await startDiscord(gameManagerProvider);
-        await startServer(db, gameManagerProvider);
+        const slackBot = await startSlack(db, gameManagerProvider);
+        await startServer(db, gameManagerProvider, slackBot);
 
-        gameManagerProvider._gameManager = new GameManager(db, discordBot);
+        gameManagerProvider._gameManager = new GameManager(db, discordBot, slackBot);
     } catch (e) {
         console.error(`Error occurred on startup: ${e}`);
     }

@@ -6,7 +6,6 @@ import { Constructor } from 'serialazy/lib/dist/types';
 import * as API from './api';
 import Cfg from './Cfg';
 import { FilterQuery } from 'mongodb';
-import { Avatar } from './api';
 
 export enum BotTarget {
     discord = 'discord',
@@ -153,11 +152,16 @@ export class GameModel {
     }
 }
 
+export class SlackToken {
+    @Serialize({ name: '_id' }) public teamId: string = '';
+    @Serialize() public token: string = '';
+}
+
 export class Db {
     client: MongoDb.MongoClient;
     game: MongoDb.Collection;
-    avatar: MongoDb.Collection;
     person: MongoDb.Collection;
+    slackToken: MongoDb.Collection;
 
     static async create(): Promise<Db> {
         const connectionString = process.env['DB_CONNECTION_STRING'];
@@ -177,16 +181,11 @@ export class Db {
         this.client = client;
         const db = this.client.db(Cfg.dbName);
         this.game = db.collection('Game');
-        this.avatar = db.collection('Avatar');
         this.person = db.collection('Person');
+        this.slackToken = db.collection('SlackToken');
     }
 
     private async init() {
-        await this.avatar.createIndex({
-            personId: 1,
-            target: 1,
-        });
-
         await this.person.createIndex({
             serviceId: 1,
             target: 1,
@@ -258,5 +257,23 @@ export class Db {
 
     private deflateArray<Type>(objs: Type[]): any[] {
         return objs.map((obj) => deflate(obj));
+    }
+
+    async putSlackToken(teamId: string, token: string): Promise<void> {
+        const slackToken = new SlackToken();
+        slackToken.teamId = teamId;
+        slackToken.token = token;
+
+        await this.slackToken.replaceOne({ _id: teamId }, deflate(slackToken), { upsert: true });
+    }
+
+    async getSlackToken(teamId: string): Promise<string | undefined> {
+        const doc = await this.slackToken.findOne({ _id: teamId });
+        if (!doc) {
+            return;
+        }
+
+        const slackToken = inflate(SlackToken, doc);
+        return slackToken.token;
     }
 }

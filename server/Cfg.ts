@@ -7,6 +7,8 @@ interface Configuration {
     imageStoreAwsBucket: string;
 
     corsDomains: string[];
+
+    slackUseSocketApi: boolean;
 }
 
 /* Debug dev against dev data sources */
@@ -19,6 +21,8 @@ const devConfiguration: Configuration = {
     imageStoreAwsBucket: 'epyc-dev-images',
 
     corsDomains: ['http://localhost:8080', 'http://localhost:3000'],
+
+    slackUseSocketApi: true,
 };
 
 /* Debug dev against prod data sources */
@@ -31,6 +35,8 @@ const devAgainstProdConfiguration: Configuration = {
     imageStoreAwsBucket: 'epyc-images',
 
     corsDomains: ['http://localhost:8080', 'http://localhost:3000'],
+
+    slackUseSocketApi: true,
 };
 
 /* Prod data sources */
@@ -43,6 +49,8 @@ const prodConfiguration: Configuration = {
     imageStoreAwsBucket: 'epyc-images',
 
     corsDomains: ['http://epyc.phlegmatic.ca', 'https://epyc.phlegmatic.ca'],
+
+    slackUseSocketApi: false,
 };
 
 let cfg = prodConfiguration; // default

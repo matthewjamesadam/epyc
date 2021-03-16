@@ -35,7 +35,7 @@ export type MessageContent = MessageChunk[];
 
 const helpMessage: MessageContent = [
     `🧑🏾‍🎨 `,
-    Bold('**Eat Poop You Cat**'),
+    Bold('Eat Poop You Cat'),
     `\n\n`,
     `🤖 Bot Commands:\n`,
     `* `,
