@@ -57,18 +57,18 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slack
     app.use(Express.json());
 
     // Answer Slack API challenges
-    app.post('/slack/events', (req, res, next) => {
-        console.log('Received slack challenge!');
-        if (req.body && req.body.challenge) {
-            console.log('Returning slack challenge!');
-            res.send(req.body.challenge);
-        }
-    });
+    // app.post('/slack/events', (req, res, next) => {
+    //     console.log('Received slack challenge!');
+    //     if (req.body && req.body.challenge) {
+    //         console.log('Returning slack challenge!');
+    //         res.send(req.body.challenge);
+    //     }
+    // });
 
-    // const slackMiddleware = slackBot.requestListener;
-    // if (slackMiddleware) {
-    //     app.use('/slack/events', slackMiddleware);
-    // }
+    const slackMiddleware = slackBot.requestListener;
+    if (slackMiddleware) {
+        app.use('/slack/events', slackMiddleware);
+    }
 
     app.use('/api', corsMiddleware);
     app.use(CookieParser());
