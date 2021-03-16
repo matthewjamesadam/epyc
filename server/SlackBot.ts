@@ -151,13 +151,19 @@ export class SlackBot extends Bot {
         const teamId = this.parseString(event.team);
         const text = this.parseString(event.text);
         const channelId = this.parseString(event.channel);
+        const authorId = this.parseString(event.user);
 
-        if (!teamId || !text || !channelId) {
+        if (!teamId || !text || !channelId || !authorId) {
             return;
         }
 
         const teamToken = await this.getTeamToken(teamId);
         if (!teamToken) {
+            return;
+        }
+
+        const authorPerson = await this.resolvePersonRef(teamId, teamToken, authorId);
+        if (!authorPerson) {
             return;
         }
 
@@ -182,7 +188,7 @@ export class SlackBot extends Bot {
 
         const channel = ChannelModel.create(this.makeId(teamId, channelId), '', BotTarget.slack);
 
-        await this.processMessage(channel, botPerson, text, mentionPersons);
+        await this.processMessage(channel, authorPerson, text, mentionPersons);
     }
 
     private async getTeamToken(teamId: string): Promise<string | undefined> {
