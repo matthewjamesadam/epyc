@@ -61,6 +61,15 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slack
         app.use('/slack/events', slackMiddleware);
     }
 
+    // Answer Slack API challenges
+    app.post('/slack/challenge', (req, res, next) => {
+        console.log('Received slack challenge!');
+        if (req.body && req.body.challenge) {
+            console.log('Returning slack challenge!');
+            res.send(req.body.challenge);
+        }
+    });
+
     app.use('/api', corsMiddleware);
     app.use(CookieParser());
 
