@@ -30,7 +30,7 @@ export class GameManagerProvider {
 export class GameManager {
     urlBase: string;
 
-    constructor(private db: Db, private discordBot: Bot) {
+    constructor(private db: Db, private discordBot: Bot, private slackBot: Bot) {
         this.urlBase = Cfg.baseWebPath;
     }
 
@@ -175,15 +175,15 @@ export class GameManager {
             return; // No person to update
         }
 
-        const botAvatar = await this.getBotTarget(person.target).getAvatar(person);
-
-        if (!botAvatar) {
-            return; // Nothing to update
-        }
-
         const lastValid = spacetime().subtract(1, 'month');
 
         if (person.avatar && spacetime(person.avatar.lastUpdated).isAfter(lastValid)) {
+            return; // Nothing to update
+        }
+
+        const botAvatar = await this.getBotTarget(person.target).getAvatar(person);
+
+        if (!botAvatar) {
             return; // Nothing to update
         }
 
@@ -347,9 +347,9 @@ export class GameManager {
         switch (target) {
             case BotTarget.discord:
                 return this.discordBot;
+            case BotTarget.slack:
+                return this.slackBot;
         }
-
-        throw new Error('No valid bot!'); // FIXME
     }
 
     private sendMessage(channel: ChannelModel, ...content: MessageContent) {
