@@ -60,7 +60,7 @@ export class SlackBot extends Bot {
 
             const eventAdapter = createEventAdapter(signingSecret, { includeBody: true });
 
-            eventAdapter.on('app_mention', async ({ event, body }) => {
+            eventAdapter.on('app_mention', async (event, body) => {
                 await this.processSlackMessage(body, event);
             });
 
