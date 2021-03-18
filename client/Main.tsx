@@ -46,6 +46,21 @@ export default function () {
                     <About />
                 </Route>
 
+                {/* Route for testing the drawing UI */}
+                <Route
+                    path="/play/testdraw"
+                    render={(props) => {
+                        return (
+                            <Draw
+                                gameName={''}
+                                frameId={''}
+                                title={'Nothing'}
+                                onDone={() => alert('Submit your turn')}
+                            />
+                        );
+                    }}
+                />
+
                 <Route path="/play/:gameName/:frameId/done">
                     <PlayDone />
                 </Route>
