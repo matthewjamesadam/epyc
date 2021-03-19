@@ -56,9 +56,14 @@ export class GameManager {
 
     async startGame(players: PersonRef[], channel: ChannelModel): Promise<void> {
         const persons = await this.resolvePersons(players);
+        const personIds = new Set<string>(persons.map((person) => person.id));
+
+        // Add interested people
+        const interestedPeople = (await this.db.getInterest(channel)).filter((person) => !personIds.has(person.id));
+        const allPersons = persons.concat(interestedPeople);
 
         // Collect people
-        const frames: Array<FrameModel> = persons.map((person) => FrameModel.create(person.id));
+        const frames: Array<FrameModel> = allPersons.map((person) => FrameModel.create(person.id));
 
         // FIXME -- for dev testing -- remove at some point!
         if (!Cfg.isProduction) {
@@ -440,6 +445,27 @@ export class GameManager {
         game.frames.splice(frameIdx, 1);
         await this.db.putGame(game);
         await this.onFrameDone(game, frameIdx - 1);
+    }
+
+    async setAvailable(channel: ChannelModel, personRef: PersonRef, isAvailable: boolean) {
+        const person = await this.resolvePerson(personRef);
+        await this.db.putInterest(person, channel, isAvailable);
+
+        if (!isAvailable) {
+            this.sendMessage(
+                channel,
+                'OK ',
+                Bold(person.name),
+                ', you will no longer be added to new games in this channel.'
+            );
+        } else {
+            this.sendMessage(
+                channel,
+                'OK ',
+                Bold(person.name),
+                ', you will now be automatically added to new games in this channel.'
+            );
+        }
     }
 
     // async shuffleGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {

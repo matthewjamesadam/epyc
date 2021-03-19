@@ -24,6 +24,10 @@ export class ChannelModel {
         model.target = target;
         return model;
     }
+
+    equals(channel: ChannelModel): boolean {
+        return this.id === channel.id && this.target === channel.target;
+    }
 }
 
 export class AvatarModel {
@@ -157,11 +161,32 @@ export class SlackToken {
     @Serialize() public token: string = '';
 }
 
+export class InterestModel {
+    @Serialize() public personId: string = '';
+    @Serialize() public channel: ChannelModel = new ChannelModel();
+
+    static create(personId: string, channelId: string, target: BotTarget) {
+        const model = new InterestModel();
+        model.personId = personId;
+        model.channel.id = channelId;
+        model.channel.target = target;
+
+        return model;
+    }
+}
+
+class ChannelLinkModel {
+    @Serialize() public lhs: ChannelModel = new ChannelModel();
+    @Serialize() public rhs: ChannelModel = new ChannelModel();
+}
+
 export class Db {
     client: MongoDb.MongoClient;
     game: MongoDb.Collection;
     person: MongoDb.Collection;
     slackToken: MongoDb.Collection;
+    interest: MongoDb.Collection;
+    channelLink: MongoDb.Collection;
 
     static async create(): Promise<Db> {
         const connectionString = process.env['DB_CONNECTION_STRING'];
@@ -183,12 +208,35 @@ export class Db {
         this.game = db.collection('Game');
         this.person = db.collection('Person');
         this.slackToken = db.collection('SlackToken');
+        this.interest = db.collection('Interest');
+        this.channelLink = db.collection('ChannelLink');
     }
 
     private async init() {
-        await this.person.createIndex({
-            serviceId: 1,
-            target: 1,
+        await this.person.createIndex(
+            {
+                serviceId: 1,
+                target: 1,
+            }
+            // {
+            //     unique: true,
+            // }
+        );
+
+        await this.interest.createIndex(
+            {
+                personId: 1,
+                'channel.id': 1,
+                'channel.target': 1,
+            },
+            {
+                unique: true,
+            }
+        );
+
+        await this.interest.createIndex({
+            'channel.id': 1,
+            'channel.target': 1,
         });
     }
 
@@ -275,5 +323,68 @@ export class Db {
 
         const slackToken = inflate(SlackToken, doc);
         return slackToken.token;
+    }
+
+    private async resolveLinkedChannels(channel: ChannelModel): Promise<ChannelModel[]> {
+        // Find channel links
+        const channelLinkDocs = await this.channelLink
+            .find({
+                $or: [
+                    { 'lhs.id': channel.id, 'lhs.target': channel.target },
+                    { 'rhs.id': channel.id, 'rhs.target': channel.target },
+                ],
+            })
+            .toArray();
+
+        const channelLinks = this.inflateArray(channelLinkDocs, ChannelLinkModel);
+        const allChannels = [channel];
+
+        channelLinks.forEach((link) => {
+            if (!allChannels.find((channel) => link.lhs.equals(channel))) {
+                allChannels.push(link.lhs);
+            }
+            if (!allChannels.find((channel) => link.rhs.equals(channel))) {
+                allChannels.push(link.rhs);
+            }
+        });
+
+        return allChannels;
+    }
+
+    async getInterest(channel: ChannelModel): Promise<PersonModel[]> {
+        const allChannels = await this.resolveLinkedChannels(channel);
+
+        const promises = allChannels.map((theChannel) => {
+            return this.interest.find({ 'channel.id': theChannel.id, 'channel.target': theChannel.target }).toArray();
+        });
+
+        const interestDocs = (await Promise.all(promises)).flatMap((doc) => doc);
+        const interests = this.inflateArray(interestDocs, InterestModel);
+        const interestIds = interests.map((interest) => interest.personId);
+
+        if (interestIds.length === 0) {
+            return [];
+        }
+
+        // Find all people associated with these interests
+        const personDocs = await this.person.find({ _id: { $in: interestIds } }).toArray();
+        return this.inflateArray(personDocs, PersonModel);
+    }
+
+    async putInterest(person: PersonModel, channel: ChannelModel, isInterested: boolean): Promise<void> {
+        const filter = {
+            personId: person.id,
+            'channel.id': channel.id,
+            'channel.target': channel.target,
+        };
+
+        if (!isInterested) {
+            await this.interest.deleteMany(filter);
+            return;
+        }
+
+        const interest = InterestModel.create(person.id, channel.id, channel.target);
+        const doc = deflate(interest);
+        await this.interest.replaceOne(filter, doc, { upsert: true });
     }
 }
