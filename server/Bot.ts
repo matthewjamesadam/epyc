@@ -51,8 +51,11 @@ const helpMessage: MessageContent = [
     Block(`@epyc leave <game>`),
     `: Leave an in-progress game\n`,
     `* `,
-    Block(`@epyc shuffle <game>`),
-    `: Shuffle remaining turns for an in-progress game\n`,
+    Block(`@epyc available`),
+    `: Automatically add yourself to all new games in this channel\n`,
+    `* `,
+    Block(`@epyc unavailable`),
+    `: Do not auto-add yourself to all new games in this channel\n`,
     `\n👨🏿‍💻 Go to https://epyc.phlegmatic.ca to see old games!\n`,
 ];
 
@@ -161,6 +164,14 @@ export abstract class Bot {
 
                 case 'leave':
                     await this.onLeave(channel, person, allItems);
+                    break;
+
+                case 'available':
+                    await this.gameManager.gameManager.setAvailable(channel, person, true);
+                    break;
+
+                case 'unavailable':
+                    await this.gameManager.gameManager.setAvailable(channel, person, false);
                     break;
 
                 // case 'shuffle':
