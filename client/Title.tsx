@@ -32,22 +32,24 @@ export default function Title(props: { gameName: string; frameId: string; imageU
             {props.imageUrl && image}
 
             <Card.Body>
-                <Card.Text>{text}</Card.Text>
+                <div className="d-flex flex-column">
+                    <Card.Text>{text}</Card.Text>
 
-                <Form.Group>
-                    <Form.Control
-                        as="textarea"
-                        autoFocus
-                        rows={5}
-                        value={title}
-                        style={{ resize: 'none' }}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.currentTarget.value)}
-                    />
-                </Form.Group>
+                    <Form.Group>
+                        <Form.Control
+                            as="textarea"
+                            autoFocus
+                            rows={5}
+                            value={title}
+                            style={{ resize: 'none' }}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.currentTarget.value)}
+                        />
+                    </Form.Group>
 
-                <Button onClick={submitTitle} disabled={isSubmittingTitle}>
-                    Done
-                </Button>
+                    <Button className="align-self-end" onClick={submitTitle} disabled={isSubmittingTitle}>
+                        Done
+                    </Button>
+                </div>
             </Card.Body>
         </Card>
     );

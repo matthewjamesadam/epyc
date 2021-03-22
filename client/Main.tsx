@@ -13,6 +13,7 @@ import PlayDone from './PlayDone';
 import Game from './Game';
 import About from './About';
 import GitHubIcon from './GitHubIcon';
+import Title from './Title';
 
 export default function () {
     return (
@@ -50,11 +51,19 @@ export default function () {
                 <Route
                     path="/play/testdraw"
                     render={(props) => {
+                        return <Draw gameName="" frameId="" title="Nothing" onDone={() => alert('Submit your turn')} />;
+                    }}
+                />
+
+                {/* Route for testing the drawing UI */}
+                <Route
+                    path="/play/testtitle"
+                    render={(props) => {
                         return (
-                            <Draw
-                                gameName={''}
-                                frameId={''}
-                                title={'Nothing'}
+                            <Title
+                                gameName=""
+                                frameId=""
+                                imageUrl="https://epyc-images.s3-us-west-2.amazonaws.com/hiatism/6054be49-e876-4d09-8899-43cc05733840.png"
                                 onDone={() => alert('Submit your turn')}
                             />
                         );
