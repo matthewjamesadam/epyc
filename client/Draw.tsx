@@ -57,13 +57,13 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                     {drawManager?.toolChildren}
                 </div>
 
-                <div className="mb-1">
+                <div>
                     <ToggleButtonGroup
                         type="radio"
                         name="tools"
                         size="sm"
                         value={drawManager?.selectedTool.type}
-                        className="mr-1"
+                        className="mr-1 mb-1"
                     >
                         {drawManager?.tools.map((tool) => {
                             return (
@@ -86,7 +86,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         name="clipboard-tools"
                         size="sm"
                         value={drawManager?.selectedTool.type}
-                        className="mr-1"
+                        className="mr-1 mb-1"
                     >
                         <ToggleButton
                             value={ToolType.select}
@@ -120,7 +120,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         </ToggleButton>
                     </ToggleButtonGroup>
 
-                    <ButtonGroup type="radio" name="tools" size="sm">
+                    <ButtonGroup type="radio" name="tools" size="sm" className="mb-1">
                         <Button
                             disabled={(drawManager?.ops.length || 0) <= 0}
                             variant="outline-primary"
@@ -143,8 +143,13 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                     </ButtonGroup>
                 </div>
 
-                <div className="mb-1">
-                    <Button size="sm" className="mr-1" ref={buttonTarget} onClick={() => setIsStrokeColourOpen(true)}>
+                <div className="mb-2">
+                    <Button
+                        size="sm"
+                        className="mr-1 mb-1"
+                        ref={buttonTarget}
+                        onClick={() => setIsStrokeColourOpen(true)}
+                    >
                         <div style={{ width: '1rem', height: '1rem', background: drawManager?.strokeColour }} />
                     </Button>
 
@@ -167,7 +172,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         </Popover>
                     </Overlay>
 
-                    <ButtonGroup name="colour" size="sm" className="mr-1">
+                    <ButtonGroup name="colour" size="sm" className="mr-1 mb-1">
                         {fixedColours.map((colour) => {
                             const style = {
                                 background: colour,
@@ -188,7 +193,13 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         })}
                     </ButtonGroup>
 
-                    <ToggleButtonGroup type="radio" name="colour" size="sm" value={drawManager?.lineWidth}>
+                    <ToggleButtonGroup
+                        type="radio"
+                        name="colour"
+                        size="sm"
+                        className="mb-1"
+                        value={drawManager?.lineWidth}
+                    >
                         {lineWidths.map((lineWidth) => {
                             return (
                                 <ToggleButton
@@ -207,7 +218,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                     </ToggleButtonGroup>
                 </div>
 
-                <div>
+                <div className="d-flex flex-column align-items-end">
                     <Button onClick={uploadImage} disabled={isUploadingImage}>
                         Done!
                     </Button>
