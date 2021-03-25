@@ -48,7 +48,7 @@ export class DiscordBot extends Bot {
 
         const mentions: Array<PersonRef> = message.mentions.users
             .filter((user) => user.id !== this.client.user?.id)
-            .map((user) => ({ id: message.author.id, target: BotTarget.discord, name: message.author.username }));
+            .map((user) => ({ id: user.id, target: BotTarget.discord, name: user.username }));
 
         this.processMessage(channel, person, message.cleanContent, mentions);
     }
