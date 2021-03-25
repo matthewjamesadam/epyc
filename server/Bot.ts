@@ -138,7 +138,7 @@ export abstract class Bot {
     }
 
     async processMessage(channel: ChannelModel, person: PersonRef, message: string, mentions: PersonRef[]) {
-        let allItems = message.split(' ');
+        let allItems = message.split(' ').filter((str) => str.length > 0);
 
         if (allItems.length < 2) {
             return this.printIDunnoMessage(channel);
@@ -151,7 +151,7 @@ export abstract class Bot {
                     break;
 
                 case 'start':
-                    await this.startGame(channel, mentions);
+                    await this.startGame(channel, mentions, allItems);
                     break;
 
                 case 'status':
@@ -200,8 +200,9 @@ export abstract class Bot {
         this.sendMessage(channel, '🧐 huh?  Try ', Block('@epyc help'), ' for help.');
     }
 
-    private async startGame(channel: ChannelModel, players: PersonRef[]) {
-        await this.gameManager.gameManager.startGame(players, channel);
+    private async startGame(channel: ChannelModel, players: PersonRef[], allItems: string[]) {
+        const includeAvailable = allItems.includes('available');
+        await this.gameManager.gameManager.startGame(players, channel, includeAvailable);
     }
 
     private async onJoin(channel: ChannelModel, person: PersonRef, allItems: string[]) {

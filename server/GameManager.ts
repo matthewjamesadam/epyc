@@ -4,7 +4,7 @@ import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
 import { Db } from './Db';
 import { generateFakeWord } from 'fakelish';
-import { Bot, MessageContent, Bold, GameLogicError, Block, PersonRef } from './Bot';
+import { Bot, MessageContent, Bold, GameLogicError, Block, PersonRef, MessageChunk } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageProcessor } from './ImageProcessor';
@@ -12,6 +12,8 @@ import spacetime from 'spacetime';
 import Cfg from './Cfg';
 import fetch from 'node-fetch';
 import crypto from 'crypto';
+import { RandomEmoji } from './Emojis';
+
 import { v4 as uuid } from 'uuid';
 
 // Cheap IOC container
@@ -54,12 +56,17 @@ export class GameManager {
         return models;
     }
 
-    async startGame(players: PersonRef[], channel: ChannelModel): Promise<void> {
+    async startGame(players: PersonRef[], channel: ChannelModel, includeAvailable: boolean): Promise<void> {
         const persons = await this.resolvePersons(players);
         const personIds = new Set<string>(persons.map((person) => person.id));
 
         // Add interested people
-        const interestedPeople = (await this.db.getInterest(channel)).filter((person) => !personIds.has(person.id));
+        let interestedPeople: PersonModel[] = [];
+
+        if (includeAvailable) {
+            interestedPeople = (await this.db.getInterest(channel)).filter((person) => !personIds.has(person.id));
+        }
+
         const allPersons = persons.concat(interestedPeople);
 
         // Collect people
@@ -361,7 +368,7 @@ export class GameManager {
         this.getBotTarget(channel.target).sendMessage(channel, ...content);
     }
 
-    async reportStatus(channel: ChannelModel): Promise<void> {
+    private async getGameStatuses(channel: ChannelModel): Promise<MessageContent> {
         const query = {
             isComplete: false,
             'channel.id': channel.id,
@@ -370,8 +377,7 @@ export class GameManager {
         const games = await (await this.db.getGames()).filter((game) => !game.isComplete);
 
         if (games.length === 0) {
-            throw new GameLogicError('No games are in progress in this channel');
-            return;
+            return [`${RandomEmoji('shrugger')} No games are in progress in this channel`];
         }
 
         const messagePromises: Promise<MessageContent>[] = games.map(async (game) => {
@@ -385,7 +391,7 @@ export class GameManager {
             const person = await this.db.getPerson(nextFrame.personId);
 
             return [
-                '\n',
+                '\n• ',
                 Bold(game.name),
                 ': Waiting on ',
                 Bold(person?.name || '??'),
@@ -394,7 +400,32 @@ export class GameManager {
         });
 
         const gameMessages = (await Promise.all(messagePromises)).flatMap((messages) => messages);
-        await this.sendMessage(channel, 'The following games are in progress:', ...gameMessages);
+        return ['🕒 The following games are in progress:', ...gameMessages];
+    }
+
+    async getAvailableStatuses(channel: ChannelModel): Promise<MessageContent> {
+        const available = await this.db.getInterest(channel);
+
+        if (available.length === 0) {
+            return [`\n\n${RandomEmoji('shrugger')} No people are available to play in this channel`];
+        }
+
+        const availableNames = available
+            .flatMap<MessageChunk>((person) => [', ', Bold(person.name)])
+            .slice(1);
+
+        return [
+            `\n\n${RandomEmoji('artist')} The following people are available to play in this channel: `,
+            ...availableNames,
+        ];
+    }
+
+    async reportStatus(channel: ChannelModel): Promise<void> {
+        const [gameMessages, availableMessages] = await Promise.all([
+            this.getGameStatuses(channel),
+            this.getAvailableStatuses(channel),
+        ]);
+        await this.sendMessage(channel, ...gameMessages, ...availableMessages);
     }
 
     async joinGame(channel: ChannelModel, personRef: PersonRef, gameName: string): Promise<void> {
@@ -456,14 +487,14 @@ export class GameManager {
                 channel,
                 'OK ',
                 Bold(person.name),
-                ', you will no longer be added to new games in this channel.'
+                ', you are no longer available for new games in this channel.'
             );
         } else {
             this.sendMessage(
                 channel,
                 'OK ',
                 Bold(person.name),
-                ', you will now be automatically added to new games in this channel.'
+                ', you are now available for new games in this channel.'
             );
         }
     }
