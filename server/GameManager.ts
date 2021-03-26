@@ -39,6 +39,14 @@ export class GameManager {
     private async resolvePerson(person: PersonRef): Promise<PersonModel> {
         const dbPerson = await this.db.getPersonFromService(person.id, person.target);
         if (dbPerson) {
+            // Check for preferred person ID
+            if (dbPerson.preferredPersonId) {
+                const preferredPerson = await this.db.getPerson(dbPerson.preferredPersonId);
+                if (preferredPerson) {
+                    return preferredPerson;
+                }
+            }
+
             return dbPerson;
         }
 
@@ -347,7 +355,7 @@ export class GameManager {
             return;
         }
 
-        this.getBotTarget(person.target).sendDM(
+        this.sendDM(
             person,
             `It's your turn to play Eat Poop You Cat on game `,
             Bold(game.name),
@@ -364,8 +372,22 @@ export class GameManager {
         }
     }
 
-    private sendMessage(channel: ChannelModel, ...content: MessageContent) {
-        this.getBotTarget(channel.target).sendMessage(channel, ...content);
+    private async sendMessage(channel: ChannelModel, ...content: MessageContent) {
+        await this.getBotTarget(channel.target).sendMessage(channel, ...content);
+    }
+
+    private async sendDM(person: PersonModel, ...content: MessageContent) {
+        let dmTarget = person;
+
+        // Check for person redirect
+        if (person.preferredPersonId) {
+            const preferredPerson = await this.db.getPerson(person.preferredPersonId);
+            if (preferredPerson) {
+                dmTarget = preferredPerson;
+            }
+        }
+
+        await this.getBotTarget(dmTarget.target).sendDM(dmTarget, ...content);
     }
 
     private async getGameStatuses(channel: ChannelModel): Promise<MessageContent> {
@@ -549,7 +571,7 @@ export class GameManager {
             await this.onFrameDone(game, incompleteFrameIdx - 1);
 
             if (person) {
-                await this.getBotTarget(person.target).sendDM(
+                await this.sendDM(
                     person,
                     'Oh no!  You took too long to play your turn on game ',
                     Bold(game.name),
@@ -567,7 +589,7 @@ export class GameManager {
         await this.db.putGame(game);
 
         if (person) {
-            await this.getBotTarget(person.target).sendDM(
+            await this.sendDM(
                 person,
                 'This is a reminder to play your turn on game ',
                 Bold(game.name),
