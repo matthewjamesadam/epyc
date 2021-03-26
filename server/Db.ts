@@ -61,6 +61,7 @@ export class PersonModel {
     @Serialize() public serviceId: string = '';
     @Serialize() public target: BotTarget = BotTarget.discord;
     @Serialize({ optional: true }) public avatar?: AvatarModel;
+    @Serialize({ optional: true }) public preferredPersonId?: string;
 
     static create(serviceId: string, name: string, target: BotTarget) {
         const model = new PersonModel();
