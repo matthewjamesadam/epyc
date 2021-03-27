@@ -7,6 +7,8 @@ import Cfg from './Cfg';
 import { BotTarget, ChannelModel, Db, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
 import { RequestListener } from 'http';
+import { v4 as uuid } from 'uuid';
+import Express from 'express';
 
 const RE_TAG = new RegExp('<@(.+?)>', 'g');
 
@@ -14,6 +16,7 @@ export class SlackBot extends Bot {
     socketMode?: SocketModeClient;
     webClient = new WebClient();
     eventAdapter?: SlackEventAdapter;
+    installProvider?: InstallProvider;
 
     // Map team to bot user IDs
     botUserIds = new Map<string, PersonRef>();
@@ -23,6 +26,52 @@ export class SlackBot extends Bot {
     }
 
     async init(): Promise<void> {
+        const slackClientId = process.env['SLACK_CLIENT_ID'];
+        const slackClientSecret = process.env['SLACK_CLIENT_SECRET'];
+
+        // Initialize the oauth workflow
+        if (slackClientId && slackClientSecret) {
+            this.installProvider = new InstallProvider({
+                clientId: slackClientId,
+                clientSecret: slackClientSecret,
+                stateSecret: uuid(),
+                installationStore: {
+                    storeInstallation: async (installation) => {
+                        if (installation.isEnterpriseInstall && installation.enterprise?.id) {
+                            return this.db.putSlackInstallation(installation.enterprise?.id, installation);
+                        }
+                        if (installation.team) {
+                            console.log('Saving installation!');
+
+                            return this.db.putSlackInstallation(installation.team.id, installation);
+                        }
+
+                        throw new Error('Could not store slack installation');
+                    },
+
+                    fetchInstallation: async (installQuery) => {
+                        if (installQuery.isEnterpriseInstall && installQuery.enterpriseId) {
+                            return await this.db.getSlackInstallation(installQuery.enterpriseId);
+                        }
+                        if (installQuery.teamId) {
+                            console.log(`Getting installation for ${installQuery.teamId}!`);
+                            const q = await this.db.getSlackInstallation(installQuery.teamId);
+
+                            if (q) {
+                                console.log('Got installation!');
+                            } else {
+                                console.log('Did not get installation!');
+                            }
+                            return q;
+                        }
+                        throw new Error('Could not fetch slack installation');
+                    },
+                },
+            });
+        } else {
+            console.log('SLACK_CLIENT_ID or SLACK_CLIENT_SECRET is undefined -- slack oauth disabled.');
+        }
+
         if (Cfg.slackUseSocketApi) {
             const token = process.env['SLACK_SOCKET_TOKEN'];
             // if (!token) {
@@ -79,6 +128,16 @@ export class SlackBot extends Bot {
 
     get requestListener(): RequestListener | undefined {
         return this.eventAdapter?.requestListener();
+    }
+
+    handleOAuthRequest(req: Express.Request, res: Express.Response) {
+        if (this.installProvider) {
+            console.log('Sending to install provider!');
+            this.installProvider.handleCallback(req, res);
+            return;
+        }
+
+        res.sendStatus(500);
     }
 
     private parseString(value: any): string | undefined {

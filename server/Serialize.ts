@@ -1,14 +1,10 @@
 import { deflate, inflate, Serialize } from 'serialazy';
 import { ObjectId } from 'mongodb';
 import { DecoratorOptions } from 'serialazy/lib/dist/options';
-import { MongoDbSettings } from 'aws-sdk/clients/dms';
 
 type Constructor<T> = new (...args: any[]) => T;
 
-function SerializeArray<Type>(
-    ctor: Constructor<Type>,
-    options: DecoratorOptions<Array<Type>, Array<Type>> = {}
-) {
+function SerializeArray<Type>(ctor: Constructor<Type>, options: DecoratorOptions<Array<Type>, Array<Type>> = {}) {
     return Serialize({
         ...options,
         down: (instances: Array<Type>) => {
@@ -52,7 +48,7 @@ function SerializeDate(options: DecoratorOptions<String, Date> = {}) {
         },
         up: (jsonObj: any) => {
             return new Date(jsonObj);
-        }
+        },
     });
 }
 
@@ -68,4 +64,16 @@ function SerializeObjectId(options: DecoratorOptions<ObjectId, string> = {}) {
     });
 }
 
-export { SerializeArray, SerializeArrayBasic, SerializeDate, SerializeObjectId };
+function SerializeRaw(options: DecoratorOptions<any, any> = {}) {
+    return Serialize({
+        ...options,
+        down: (instance: any) => {
+            return instance;
+        },
+        up: (jsonObj: any) => {
+            return jsonObj;
+        },
+    });
+}
+
+export { SerializeArray, SerializeArrayBasic, SerializeDate, SerializeObjectId, SerializeRaw };

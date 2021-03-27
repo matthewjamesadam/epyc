@@ -68,6 +68,11 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slack
         app.use('/slack/events', slackMiddleware);
     }
 
+    app.get('/slack/oauth', (req, res) => {
+        console.log('Got slack oauth request!');
+        slackBot.handleOAuthRequest(req, res);
+    });
+
     app.use('/api', Express.json());
 
     app.use('/api', corsMiddleware);
