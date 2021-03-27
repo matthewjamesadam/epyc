@@ -75,7 +75,6 @@ function DrawQuoteFrame(canvas: HTMLCanvasElement, bounds: DOMRectReadOnly) {
     context.stroke();
 
     context.globalCompositeOperation = 'source-over';
-    console.log('drawwwww');
 }
 
 export function Quote(props: { children: React.ReactNode }) {

@@ -56,9 +56,7 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slack
 
     // Answer Slack API challenges
     // app.post('/slack/events', (req, res, next) => {
-    //     console.log('Received slack challenge!');
     //     if (req.body && req.body.challenge) {
-    //         console.log('Returning slack challenge!');
     //         res.send(req.body.challenge);
     //     }
     // });
@@ -73,7 +71,6 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slack
     });
 
     app.get('/slack/oauth', (req, res) => {
-        console.log('Got slack oauth request!');
         slackBot.handleOAuthRequest(req, res);
     });
 
