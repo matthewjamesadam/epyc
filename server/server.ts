@@ -68,6 +68,10 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slack
         app.use('/slack/events', slackMiddleware);
     }
 
+    app.get('/slack/install', (req, res) => {
+        slackBot.installOAuth(req, res);
+    });
+
     app.get('/slack/oauth', (req, res) => {
         console.log('Got slack oauth request!');
         slackBot.handleOAuthRequest(req, res);
