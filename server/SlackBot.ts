@@ -41,8 +41,6 @@ export class SlackBot extends Bot {
                             return this.db.putSlackInstallation(installation.enterprise?.id, installation);
                         }
                         if (installation.team) {
-                            console.log('Saving installation!');
-
                             return this.db.putSlackInstallation(installation.team.id, installation);
                         }
 
@@ -54,15 +52,7 @@ export class SlackBot extends Bot {
                             return await this.db.getSlackInstallation(installQuery.enterpriseId);
                         }
                         if (installQuery.teamId) {
-                            console.log(`Getting installation for ${installQuery.teamId}!`);
-                            const q = await this.db.getSlackInstallation(installQuery.teamId);
-
-                            if (q) {
-                                console.log('Got installation!');
-                            } else {
-                                console.log('Did not get installation!');
-                            }
-                            return q;
+                            return await this.db.getSlackInstallation(installQuery.teamId);
                         }
                         throw new Error('Could not fetch slack installation');
                     },
@@ -136,7 +126,6 @@ export class SlackBot extends Bot {
             return;
         }
 
-        console.log('Redirecting to oauth url!');
         this.installProvider
             .generateInstallUrl({
                 scopes: [
@@ -149,7 +138,6 @@ export class SlackBot extends Bot {
                 ],
             })
             .then((url) => {
-                console.log(`Oauth url is ${url}!`);
                 res.redirect(url);
             });
     }
@@ -160,7 +148,6 @@ export class SlackBot extends Bot {
             return;
         }
 
-        console.log('Sending to install provider!');
         this.installProvider.handleCallback(req, res);
     }
 
