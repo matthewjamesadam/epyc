@@ -1,5 +1,5 @@
 import { deflate, inflate, Serializable, Serialize } from 'serialazy';
-import { SerializeDate, SerializeArray, SerializeArrayBasic, SerializeObjectId } from './Serialize';
+import { SerializeDate, SerializeArray, SerializeRaw } from './Serialize';
 import { v4 as uuid } from 'uuid';
 import * as MongoDb from 'mongodb';
 import { Constructor } from 'serialazy/lib/dist/types';
@@ -159,7 +159,8 @@ export class GameModel {
 
 export class SlackToken {
     @Serialize({ name: '_id' }) public teamId: string = '';
-    @Serialize() public token: string = '';
+    @Serialize({ optional: true }) public token?: string;
+    @SerializeRaw({ optional: true }) public installation?: any;
 }
 
 export class InterestModel {
@@ -323,7 +324,25 @@ export class Db {
         }
 
         const slackToken = inflate(SlackToken, doc);
-        return slackToken.token;
+        return slackToken.token || slackToken.installation?.bot?.token;
+    }
+
+    async getSlackInstallation(teamId: string): Promise<any> {
+        const doc = await this.slackToken.findOne({ _id: teamId });
+        if (!doc) {
+            return;
+        }
+
+        const slackToken = inflate(SlackToken, doc);
+        return slackToken.installation;
+    }
+
+    async putSlackInstallation(teamId: string, installation: any): Promise<void> {
+        const slackToken = new SlackToken();
+        slackToken.teamId = teamId;
+        slackToken.installation = installation;
+
+        await this.slackToken.replaceOne({ id: teamId }, deflate(slackToken), { upsert: true });
     }
 
     private async resolveLinkedChannels(channel: ChannelModel): Promise<ChannelModel[]> {
