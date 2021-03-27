@@ -130,14 +130,38 @@ export class SlackBot extends Bot {
         return this.eventAdapter?.requestListener();
     }
 
-    handleOAuthRequest(req: Express.Request, res: Express.Response) {
-        if (this.installProvider) {
-            console.log('Sending to install provider!');
-            this.installProvider.handleCallback(req, res);
+    installOAuth(req: Express.Request, res: Express.Response) {
+        if (!this.installProvider) {
+            res.sendStatus(500);
             return;
         }
 
-        res.sendStatus(500);
+        console.log('Redirecting to oauth url!');
+        this.installProvider
+            .generateInstallUrl({
+                scopes: [
+                    'app_mentions:read',
+                    'channels:history',
+                    'chat:write',
+                    'im:write',
+                    'links:write',
+                    'users:read',
+                ],
+            })
+            .then((url) => {
+                console.log(`Oauth url is ${url}!`);
+                res.redirect(url);
+            });
+    }
+
+    handleOAuthRequest(req: Express.Request, res: Express.Response) {
+        if (!this.installProvider) {
+            res.sendStatus(500);
+            return;
+        }
+
+        console.log('Sending to install provider!');
+        this.installProvider.handleCallback(req, res);
     }
 
     private parseString(value: any): string | undefined {
