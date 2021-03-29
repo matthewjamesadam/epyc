@@ -102,7 +102,7 @@ export class GameManager {
             throw new GameLogicError('Could not create game');
         }
 
-        let firstPerson = persons[0];
+        let firstPerson = allPersons[0];
 
         this.sendMessage(
             channel,
