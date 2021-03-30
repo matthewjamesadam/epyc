@@ -15,6 +15,8 @@ import crypto from 'crypto';
 import { RandomEmoji } from './Emojis';
 
 import { v4 as uuid } from 'uuid';
+import ArrayUtils from './Utils';
+import Utils from './Utils';
 
 // Cheap IOC container
 export class GameManagerProvider {
@@ -75,7 +77,7 @@ export class GameManager {
             interestedPeople = (await this.db.getInterest(channel)).filter((person) => !personIds.has(person.id));
         }
 
-        const allPersons = persons.concat(interestedPeople);
+        const allPersons = Utils.shuffleArray(persons.concat(interestedPeople));
 
         // Collect people
         const frames: Array<FrameModel> = allPersons.map((person) => FrameModel.create(person.id));
@@ -276,13 +278,9 @@ export class GameManager {
         return `${this.urlBase}/game/${game.name}`;
     }
 
-    private static filterNotNull<T>(value: T | null | undefined): value is T {
-        return value !== null && value !== undefined;
-    }
-
     private async createGameTitleImage(game: GameModel) {
         // Pick a random image
-        const imageFrames = game.frames.map((frame) => frame.image).filter(GameManager.filterNotNull);
+        const imageFrames = game.frames.map((frame) => frame.image).filter(ArrayUtils.notNull);
 
         if (imageFrames.length < 0) {
             return;
