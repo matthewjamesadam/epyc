@@ -9,6 +9,7 @@ import { GameManagerProvider } from './GameManager';
 import { RequestListener } from 'http';
 import { v4 as uuid } from 'uuid';
 import Express from 'express';
+import Utils from './Utils';
 
 const RE_TAG = new RegExp('<@(.+?)>', 'g');
 
@@ -213,10 +214,6 @@ export class SlackBot extends Bot {
         }
     }
 
-    private static filterNotNull<T>(value: T | null | undefined): value is T {
-        return value !== null && value !== undefined;
-    }
-
     private async processSlackMessage(body: any, event: any) {
         const teamId = this.parseString(event.team);
         const text = this.parseString(event.text);
@@ -254,7 +251,7 @@ export class SlackBot extends Bot {
         const mentionResolved = await Promise.all(
             mentionUserIds.map((userId) => this.resolvePersonRef(teamId, teamToken, userId))
         );
-        const mentionPersons = mentionResolved.filter(SlackBot.filterNotNull);
+        const mentionPersons = mentionResolved.filter(Utils.notNull);
 
         const channel = ChannelModel.create(this.makeId(teamId, channelId), '', BotTarget.slack);
 
