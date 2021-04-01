@@ -4,7 +4,7 @@ import { InstallProvider } from '@slack/oauth';
 import { createEventAdapter, SlackEventAdapter } from '@slack/events-api';
 import { Bot, PersonAvatar, PersonRef } from './Bot';
 import Cfg from './Cfg';
-import { BotTarget, ChannelModel, Db, PersonModel } from './Db';
+import { BotTarget, ChannelModel, Db, IDb, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
 import { RequestListener } from 'http';
 import { v4 as uuid } from 'uuid';
@@ -22,7 +22,7 @@ export class SlackBot extends Bot {
     // Map team to bot user IDs
     botUserIds = new Map<string, PersonRef>();
 
-    constructor(private db: Db, gameManager: GameManagerProvider) {
+    constructor(private db: IDb, gameManager: GameManagerProvider) {
         super(gameManager);
     }
 

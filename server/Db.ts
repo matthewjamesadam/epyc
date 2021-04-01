@@ -12,6 +12,11 @@ export enum BotTarget {
     slack = 'slack',
 }
 
+export enum PersonFrameRole {
+    author = 'author',
+    artist = 'artist',
+}
+
 export class ChannelModel {
     @Serialize() public id: string = '';
     @Serialize() public name: string = '';
@@ -62,6 +67,7 @@ export class PersonModel {
     @Serialize() public target: BotTarget = BotTarget.discord;
     @Serialize({ optional: true }) public avatar?: AvatarModel;
     @Serialize({ optional: true }) public preferredPersonId?: string;
+    @Serialize({ optional: true }) public preferredGameRole?: PersonFrameRole;
 
     static create(serviceId: string, name: string, target: BotTarget) {
         const model = new PersonModel();
@@ -182,7 +188,26 @@ class ChannelLinkModel {
     @Serialize() public rhs: ChannelModel = new ChannelModel();
 }
 
-export class Db {
+export interface IDb {
+    getGames(query?: FilterQuery<any>): Promise<Array<GameModel>>;
+    getGame(gameName: string): Promise<GameModel | null>;
+    putGame(game: GameModel): Promise<void>;
+
+    getPerson(id: string): Promise<PersonModel | undefined>;
+    getPersonFromService(serviceId: string, target: BotTarget): Promise<PersonModel | undefined>;
+    putPerson(person: PersonModel): Promise<void>;
+
+    getSlackToken(teamId: string): Promise<string | undefined>;
+    getSlackInstallation(teamId: string): Promise<any>;
+    putSlackInstallation(teamId: string, installation: any): Promise<void>;
+
+    getInterest(channel: ChannelModel): Promise<PersonModel[]>;
+    putInterest(person: PersonModel, channel: ChannelModel, isInterested: boolean): Promise<void>;
+}
+
+export interface IDb {}
+
+export class Db implements IDb {
     client: MongoDb.MongoClient;
     game: MongoDb.Collection;
     person: MongoDb.Collection;
@@ -246,11 +271,6 @@ export class Db {
         await this.client.close();
     }
 
-    async createGame(game: GameModel) {
-        const doc = deflate(game);
-        await this.game.insertOne(doc);
-    }
-
     async getGames(query?: FilterQuery<any>): Promise<Array<GameModel>> {
         let docs = await this.game.find(query).limit(50).toArray();
 
@@ -267,10 +287,10 @@ export class Db {
         return inflate(GameModel, doc);
     }
 
-    async putGame(game: GameModel) {
+    async putGame(game: GameModel): Promise<void> {
         let doc = deflate(game);
-        await this.game.replaceOne({ _id: game.name }, doc);
-        return inflate(GameModel, doc);
+        await this.game.replaceOne({ _id: game.name }, doc, { upsert: true });
+        // return inflate(GameModel, doc);
     }
 
     async getPerson(id: string): Promise<PersonModel | undefined> {
@@ -307,14 +327,6 @@ export class Db {
 
     private deflateArray<Type>(objs: Type[]): any[] {
         return objs.map((obj) => deflate(obj));
-    }
-
-    async putSlackToken(teamId: string, token: string): Promise<void> {
-        const slackToken = new SlackToken();
-        slackToken.teamId = teamId;
-        slackToken.token = token;
-
-        await this.slackToken.replaceOne({ _id: teamId }, deflate(slackToken), { upsert: true });
     }
 
     async getSlackToken(teamId: string): Promise<string | undefined> {

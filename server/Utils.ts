@@ -13,4 +13,16 @@ export default class Utils {
 
         return newArray;
     }
+
+    static findRandomInArray<T>(array: T[], predicate: (value: T) => boolean): number {
+        const indices = Utils.shuffleArray([...Array(array.length).keys()]);
+
+        for (let index of indices) {
+            if (predicate(array[index])) {
+                return index;
+            }
+        }
+
+        return -1;
+    }
 }

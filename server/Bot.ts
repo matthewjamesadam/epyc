@@ -38,24 +38,33 @@ const helpMessage: MessageContent = [
     Bold('Eat Poop You Cat'),
     `\n\n`,
     `🤖 Bot Commands:\n`,
-    `* `,
+    `• `,
     Block(`@epyc start @person1 @person2 @person3 @person4`),
     `: Start a new game in this channel\n`,
-    `* `,
+    `• `,
     Block(`@epyc status`),
     `: Show the status of all games in this channel\n`,
-    `* `,
+    `• `,
     Block(`@epyc join <game>`),
     `: Join an in-progress game\n`,
-    `* `,
+    `• `,
     Block(`@epyc leave <game>`),
     `: Leave an in-progress game\n`,
-    `* `,
+    `• `,
     Block(`@epyc available`),
     `: Automatically add yourself to all new games in this channel\n`,
-    `* `,
+    `• `,
     Block(`@epyc unavailable`),
     `: Do not auto-add yourself to all new games in this channel\n`,
+    `• `,
+    Block(`@epyc prefer author`),
+    `: Prefer being an author for each game\n`,
+    `• `,
+    Block(`@epyc prefer artist`),
+    `: Prefer being an artist for each game\n`,
+    `• `,
+    Block(`@epyc prefer none`),
+    `: Be either an artist or author for each game\n`,
     `\n👨🏿‍💻 Go to https://epyc.phlegmatic.ca to see old games!\n`,
 ];
 
@@ -95,7 +104,13 @@ export interface PersonRef {
     name: string;
 }
 
-export abstract class Bot {
+export interface IBot {
+    sendMessage(channel: ChannelModel, ...content: MessageContent): Promise<void>;
+    sendDM(person: PersonModel, ...content: MessageContent): Promise<void>;
+    getAvatar(person: PersonModel): Promise<PersonAvatar | undefined>;
+}
+
+export abstract class Bot implements IBot {
     protected abstract sendStringMessage(channel: ChannelModel, content: string): Promise<void>;
     protected abstract sendStringDM(person: PersonModel, content: string): Promise<void>;
     protected abstract toBold(content: string): string;
@@ -137,7 +152,7 @@ export abstract class Bot {
         return this.sendStringDM(person, stringContent);
     }
 
-    async processMessage(channel: ChannelModel, person: PersonRef, message: string, mentions: PersonRef[]) {
+    protected async processMessage(channel: ChannelModel, person: PersonRef, message: string, mentions: PersonRef[]) {
         let allItems = message.split(' ').filter((str) => str.length > 0);
 
         if (allItems.length < 2) {
@@ -174,9 +189,9 @@ export abstract class Bot {
                     await this.gameManager.gameManager.setAvailable(channel, person, false);
                     break;
 
-                // case 'shuffle':
-                //     this.onShuffle(channel, person, allItems);
-                //     break;
+                case 'prefer':
+                    await this.onPrefer(channel, person, allItems);
+                    break;
 
                 default:
                     this.printIDunnoMessage(channel);
@@ -221,11 +236,16 @@ export abstract class Bot {
         await this.gameManager.gameManager.leaveGame(channel, person, allItems[2]);
     }
 
-    // private onShuffle(channel: ChannelModel, person: PersonModel, allItems: string[]) {
-    //     if (allItems.length < 3) {
-    //         return this.printHelpMessage(channel);
-    //     }
+    private async onPrefer(channel: ChannelModel, person: PersonRef, allItems: string[]) {
+        if (allItems.length < 3) {
+            return this.printHelpMessage(channel);
+        }
 
-    //     this.gameManager.gameManager.shuffleGame(channel, person, allItems[2]);
-    // }
+        const preference = allItems[2];
+        if (preference !== 'author' && preference !== 'artist' && preference !== 'none') {
+            return this.printHelpMessage(channel);
+        }
+
+        await this.gameManager.gameManager.setRolePreference(channel, person, preference);
+    }
 }
