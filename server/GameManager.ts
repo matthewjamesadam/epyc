@@ -1,10 +1,20 @@
-import { AvatarModel, BotTarget, ChannelModel, FrameImageModel, FrameModel, GameModel, PersonModel } from './Db';
+import {
+    AvatarModel,
+    BotTarget,
+    ChannelModel,
+    FrameImageModel,
+    FrameModel,
+    GameModel,
+    IDb,
+    PersonFrameRole,
+    PersonModel,
+} from './Db';
 import { Readable, Writable } from 'stream';
 import fs from 'fs';
 import { file as makeTmpFile } from 'tmp-promise';
 import { Db } from './Db';
 import { generateFakeWord } from 'fakelish';
-import { Bot, MessageContent, Bold, GameLogicError, Block, PersonRef, MessageChunk } from './Bot';
+import { Bot, MessageContent, Bold, GameLogicError, Block, PersonRef, MessageChunk, IBot } from './Bot';
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageProcessor } from './ImageProcessor';
@@ -34,7 +44,7 @@ export class GameManagerProvider {
 export class GameManager {
     urlBase: string;
 
-    constructor(private db: Db, private discordBot: Bot, private slackBot: Bot) {
+    constructor(private db: IDb, private discordBot: IBot, private slackBot: IBot) {
         this.urlBase = Cfg.baseWebPath;
     }
 
@@ -66,7 +76,46 @@ export class GameManager {
         return models;
     }
 
-    async startGame(players: PersonRef[], channel: ChannelModel, includeAvailable: boolean): Promise<void> {
+    private isRoleIndexCorrect(index: number, role: PersonFrameRole | undefined) {
+        if (!role) {
+            return true;
+        }
+
+        const desiredOffset = role === PersonFrameRole.author ? 0 : 1;
+        return index % 2 === desiredOffset;
+    }
+
+    private fulfillPlayerConstraints(players: PersonModel[], startingIdx: number = 0): PersonModel[] {
+        const arrayToCheck = players.slice();
+
+        // Find people who have preferred roles and swap them out
+        for (let i = 0; i < arrayToCheck.length; ++i) {
+            const thisPlayer = arrayToCheck[i];
+
+            if (this.isRoleIndexCorrect(i + startingIdx, thisPlayer.preferredGameRole)) {
+                continue;
+            }
+
+            const otherIdx = Utils.findRandomInArray(arrayToCheck, (player, idx) => {
+                return (
+                    this.isRoleIndexCorrect(i + startingIdx, player.preferredGameRole) &&
+                    this.isRoleIndexCorrect(idx + startingIdx, thisPlayer.preferredGameRole)
+                );
+            });
+
+            if (otherIdx >= 0) {
+                [arrayToCheck[otherIdx], arrayToCheck[i]] = [arrayToCheck[i], arrayToCheck[otherIdx]];
+            }
+        }
+
+        return arrayToCheck;
+    }
+
+    async startGame(
+        players: PersonRef[],
+        channel: ChannelModel,
+        includeAvailable: boolean
+    ): Promise<GameModel | undefined> {
         const persons = await this.resolvePersons(players);
         const personIds = new Set<string>(persons.map((person) => person.id));
 
@@ -77,7 +126,7 @@ export class GameManager {
             interestedPeople = (await this.db.getInterest(channel)).filter((person) => !personIds.has(person.id));
         }
 
-        const allPersons = Utils.shuffleArray(persons.concat(interestedPeople));
+        const allPersons = this.fulfillPlayerConstraints(Utils.shuffleArray(persons.concat(interestedPeople)));
 
         // Collect people
         const frames: Array<FrameModel> = allPersons.map((person) => FrameModel.create(person.id));
@@ -98,7 +147,7 @@ export class GameManager {
         let game = GameModel.create(gameName, channel, frames);
 
         try {
-            await this.db.createGame(game);
+            await this.db.putGame(game);
         } catch (error) {
             console.log(error);
             throw new GameLogicError('Could not create game');
@@ -115,6 +164,8 @@ export class GameManager {
             `'s turn.`
         );
         this.sendFrameMessage(game, frames[0], firstPerson);
+
+        return game;
     }
 
     private async getFrameData(
@@ -361,7 +412,7 @@ export class GameManager {
         );
     }
 
-    private getBotTarget(target: BotTarget): Bot {
+    private getBotTarget(target: BotTarget): IBot {
         switch (target) {
             case BotTarget.discord:
                 return this.discordBot;
@@ -469,6 +520,25 @@ export class GameManager {
         this.sendMessage(channel, 'OK ', Bold(person.name), ', you are now in game ', Bold(gameName));
     }
 
+    private async dropFrame(game: GameModel, frameIdx: number) {
+        game.frames.splice(frameIdx, 1);
+
+        const nextPlayerIdx = game.frames.findIndex((frame) => !frame.isComplete);
+        if (nextPlayerIdx < 0) {
+            return; // Game is over
+        }
+
+        const remaining = await Promise.all(
+            game.frames.slice(nextPlayerIdx).map((frame) => this.db.getPerson(frame.personId))
+        );
+
+        if (remaining.every((person) => !!person)) {
+            const remainingPeople = this.fulfillPlayerConstraints(remaining.filter(Utils.notNull), nextPlayerIdx);
+            const remainingFrames = remainingPeople.map((person) => FrameModel.create(person.id));
+            game.frames = game.frames.slice(0, nextPlayerIdx).concat(remainingFrames);
+        }
+    }
+
     async leaveGame(channel: ChannelModel, personRef: PersonRef, gameName: string): Promise<void> {
         const [game, person] = await Promise.all([
             this.db.getGame(gameName),
@@ -493,9 +563,14 @@ export class GameManager {
             throw new GameLogicError(`You've already played your turn on game `, Bold(gameName));
         }
 
-        game.frames.splice(frameIdx, 1);
+        await this.dropFrame(game, frameIdx);
         await this.db.putGame(game);
-        await this.onFrameDone(game, frameIdx - 1);
+
+        // If we just skipped the current frame, tell the next person
+        const incompleteFrameIdx = game.frames.findIndex((frame) => !frame.isComplete);
+        if (incompleteFrameIdx === frameIdx) {
+            await this.onFrameDone(game, frameIdx - 1);
+        }
     }
 
     async setAvailable(channel: ChannelModel, personRef: PersonRef, isAvailable: boolean) {
@@ -519,37 +594,6 @@ export class GameManager {
         }
     }
 
-    // async shuffleGame(channel: ChannelModel, person: PersonModel, gameName: string): Promise<void> {
-    //     const game = await this.db.getGame(gameName);
-
-    //     if (!game) {
-    //         throw new GameLogicError('Game ', Bold(gameName), ' does not exist');
-    //     }
-
-    //     if (game.isComplete) {
-    //         throw new GameLogicError('Game ', Bold(gameName), ' is already complete');
-    //     }
-
-    //     const frames = game.frames;
-
-    //     // Shuffle remaining frames
-    //     const firstIncompleteFrame = game.frames.findIndex(frame => !frame.isComplete);
-    //     if (firstIncompleteFrame < 0) {
-    //         // Should never happen
-    //         throw new Error("Could not shuffle");
-    //     }
-
-    //     // Shuffle
-    //     for (let i = frames.length - 1; i > 0; i--) {
-    //         const j = Math.floor(Math.random() * (i + 1));
-    //         [frames[i], frames[j]] = [frames[j], frames[i]];
-    //     }
-
-    //     await this.db.putGame(game);
-    //     await this.onFrameDone()
-
-    // }
-
     private async notifyGame(game: GameModel): Promise<void> {
         // Find frame
         const incompleteFrameIdx = game.frames.findIndex((frame) => !frame.isComplete);
@@ -564,7 +608,7 @@ export class GameManager {
 
         if (warnings == 2) {
             // Drop this person from the game
-            game.frames.splice(incompleteFrameIdx, 1);
+            await this.dropFrame(game, incompleteFrameIdx);
             await this.db.putGame(game);
             await this.onFrameDone(game, incompleteFrameIdx - 1);
 
@@ -603,5 +647,19 @@ export class GameManager {
         const promises = games.map((game) => this.notifyGame(game));
 
         await Promise.all(promises);
+    }
+
+    async setRolePreference(channel: ChannelModel, personRef: PersonRef, role: 'author' | 'artist' | 'none') {
+        const person = await this.resolvePerson(personRef);
+
+        const roleValue: PersonFrameRole | undefined = role === 'none' ? undefined : PersonFrameRole[role];
+        person.preferredGameRole = roleValue;
+        await this.db.putPerson(person);
+
+        if (!roleValue) {
+            await this.sendMessage(channel, 'OK ', Bold(person.name), ', you no longer have a preferred game role.');
+        } else {
+            await this.sendMessage(channel, 'OK ', Bold(person.name), ', you will now .');
+        }
     }
 }
