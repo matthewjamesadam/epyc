@@ -659,7 +659,12 @@ export class GameManager {
         if (!roleValue) {
             await this.sendMessage(channel, 'OK ', Bold(person.name), ', you no longer have a preferred game role.');
         } else {
-            await this.sendMessage(channel, 'OK ', Bold(person.name), ', you will now .');
+            await this.sendMessage(
+                channel,
+                'OK ',
+                Bold(person.name),
+                `, we will try to make sure you are an ${roleValue}.`
+            );
         }
     }
 }
