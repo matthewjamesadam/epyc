@@ -190,7 +190,7 @@ class ChannelLinkModel {
 
 export interface IDb {
     getGames(query?: FilterQuery<any>): Promise<Array<GameModel>>;
-    getGame(gameName: string): Promise<GameModel | null>;
+    getGame(gameName: string): Promise<GameModel | undefined>;
     putGame(game: GameModel): Promise<void>;
 
     getPerson(id: string): Promise<PersonModel | undefined>;
@@ -278,10 +278,10 @@ export class Db implements IDb {
         return models;
     }
 
-    async getGame(gameName: string): Promise<GameModel | null> {
+    async getGame(gameName: string): Promise<GameModel | undefined> {
         let doc = await this.game.findOne({ _id: gameName });
         if (!doc) {
-            return null;
+            return undefined;
         }
 
         return inflate(GameModel, doc);

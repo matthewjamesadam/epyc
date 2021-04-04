@@ -44,6 +44,21 @@
                 "BUILD_TYPE": "DEV"
             },
             "outFiles": ["${workspaceFolder}/server/.build/*.js"]
+        },
+
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Tests",
+            "skipFiles": ["<node_internals>/**"],
+            "program": "${workspaceRoot}/server/node_modules/jest/bin/jest.js",
+            "args": ["--verbose", "-i", "--no-cache"],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceRoot}/server",
+            "env": {
+                "BUILD_TYPE": "DEV"
+            }
         }
     ]
 }
