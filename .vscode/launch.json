@@ -11,7 +11,7 @@
             "skipFiles": ["<node_internals>/**"],
             "program": "${workspaceFolder}/server/.build/server.js",
             "preLaunchTask": "tsc: build - server/tsconfig.json",
-            "envFile": "${workspaceFolder}/../EpycDebug.sh",
+            "envFile": "${workspaceFolder}/EpycDebug.sh",
             "env": {
                 "BUILD_TYPE": "DEV"
             },
@@ -25,7 +25,7 @@
             "skipFiles": ["<node_internals>/**"],
             "program": "${workspaceFolder}/server/.build/server.js",
             "preLaunchTask": "tsc: build - server/tsconfig.json",
-            "envFile": "${workspaceFolder}/../EpycDebug.sh",
+            "envFile": "${workspaceFolder}/EpycDebug.sh",
             "env": {
                 "BUILD_TYPE": "DEV-AGAINST-PROD"
             },
@@ -39,7 +39,7 @@
             "skipFiles": ["<node_internals>/**"],
             "program": "${workspaceFolder}/server/.build/sendNotifications.js",
             "preLaunchTask": "tsc: build - server/tsconfig.json",
-            "envFile": "${workspaceFolder}/../EpycDebug.sh",
+            "envFile": "${workspaceFolder}/EpycDebug.sh",
             "env": {
                 "BUILD_TYPE": "DEV"
             },
