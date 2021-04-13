@@ -47,7 +47,7 @@ export default class TextTool extends DrawTool {
         this.text = text;
     }
 
-    onClick(e: MouseEvent): void {
+    onPointerUp(e: PointerEvent): void {
         if (this.state === TextToolState.inactive) {
             this.text = '';
             this.manager.toolChildren = React.createElement(TextToolInput, {
@@ -76,10 +76,4 @@ export default class TextTool extends DrawTool {
             this.manager.addColour(this.manager.strokeColour);
         }
     }
-
-    onPointerDown(e: PointerEvent): void {}
-
-    onPointerUp(e: PointerEvent): void {}
-
-    onPointerMove(e: PointerEvent): void {}
 }

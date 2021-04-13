@@ -157,11 +157,17 @@ export default class DrawManager implements IDrawManager {
         if (ref) {
             ref.style.cursor = 'crosshair';
             ref.style.touchAction = 'none';
-            this.bind(ref, 'click', this.onClick);
             this.bind(ref, 'pointerdown', this.onMouseDown);
             this.bind(ref, 'pointerup', this.onMouseUp);
             this.bind(ref, 'pointermove', this.onMouseMove);
             this.bind(ref, 'keypress', this.onKeyPress);
+
+            // Block touch events -- this prevents the annoying popup
+            // selection menu on mobile safari.  Touch events get
+            // translated into pointer events, which we do use.
+            this.bind(ref, 'touchstart', this.preventTouchEvents);
+            this.bind(ref, 'touchmove', this.preventTouchEvents);
+            this.bind(ref, 'touchend', this.preventTouchEvents);
         }
 
         // Unmount
@@ -172,6 +178,10 @@ export default class DrawManager implements IDrawManager {
 
         this.canvasRef = ref;
         this.rerender();
+    }
+
+    preventTouchEvents(e: TouchEvent) {
+        e.preventDefault();
     }
 
     setSelectedTool(type: ToolType) {
@@ -198,22 +208,22 @@ export default class DrawManager implements IDrawManager {
 
     onMouseDown(e: PointerEvent) {
         this.selectedTool.onPointerDown(e);
+        e.preventDefault();
     }
 
     onMouseUp(e: PointerEvent) {
         this.selectedTool.onPointerUp(e);
+        e.preventDefault();
     }
 
     onMouseMove(e: PointerEvent) {
         this.selectedTool.onPointerMove(e);
-    }
-
-    onClick(e: MouseEvent) {
-        this.selectedTool.onClick(e);
+        e.preventDefault();
     }
 
     onKeyPress(e: KeyboardEvent) {
         this.selectedTool.onKeyPress(e);
+        e.preventDefault();
     }
 
     rerender(renderTool = true) {

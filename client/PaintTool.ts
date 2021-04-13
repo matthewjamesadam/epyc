@@ -20,7 +20,7 @@ export default class PaintTool extends DrawTool {
 
     render(context: CanvasRenderingContext2D) {}
 
-    onClick(e: MouseEvent): void {
+    onPointerUp(e: PointerEvent): void {
         const canvas = this.manager.canvasRef;
         const context = canvas?.getContext('2d');
         if (!canvas || !context) {
