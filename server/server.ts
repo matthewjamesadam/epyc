@@ -32,7 +32,12 @@ let startDb = async () => {
     return db;
 };
 
-let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slackBot: SlackBot) => {
+let startServer = async (
+    db: Db,
+    gameManagerProvider: GameManagerProvider,
+    slackBot: SlackBot,
+    discordBot: DiscordBot
+) => {
     console.log('*** Starting Server');
 
     let corsDomains = new Set<string>(['http://epyc.phlegmatic.ca', 'https://epyc.phlegmatic.ca']);
@@ -74,6 +79,10 @@ let startServer = async (db: Db, gameManagerProvider: GameManagerProvider, slack
         slackBot.handleOAuthRequest(req, res);
     });
 
+    app.get('/discord/install', (req, res) => {
+        discordBot.installOAuth(req, res);
+    });
+
     app.use('/api', Express.json());
 
     app.use('/api', corsMiddleware);
@@ -104,7 +113,7 @@ let bootup = async () => {
         const db = await startDb();
         const discordBot = await startDiscord(gameManagerProvider);
         const slackBot = await startSlack(db, gameManagerProvider);
-        await startServer(db, gameManagerProvider, slackBot);
+        await startServer(db, gameManagerProvider, slackBot, discordBot);
 
         gameManagerProvider._gameManager = new GameManager(db, discordBot, slackBot);
     } catch (e) {

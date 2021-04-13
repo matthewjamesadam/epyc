@@ -2,6 +2,7 @@ import Discord, { TextChannel } from 'discord.js';
 import { Bot, PersonAvatar, PersonRef } from './Bot';
 import { BotTarget, ChannelModel, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
+import Express from 'express';
 
 export class DiscordBot extends Bot {
     client: Discord.Client;
@@ -84,5 +85,11 @@ export class DiscordBot extends Bot {
         }
 
         return { url, width: 64, height: 64 };
+    }
+
+    installOAuth(req: Express.Request, res: Express.Response) {
+        res.redirect(
+            'https://discord.com/api/oauth2/authorize?client_id=799487868987899914&permissions=18432&scope=bot'
+        );
     }
 }
