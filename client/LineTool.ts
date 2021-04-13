@@ -1,4 +1,4 @@
-import { DrawOp, DrawTool, ToolType } from './DrawTypes';
+import { DrawOp, DrawTool, IconType, ToolType } from './DrawTypes';
 
 class LineOp implements DrawOp {
     isFullRender = false;
@@ -21,6 +21,7 @@ class LineOp implements DrawOp {
 export default class LineTool extends DrawTool {
     type = ToolType.line;
     name = 'Line';
+    icon: IconType = 'line';
     op = new LineOp();
     isActive = false;
 
@@ -46,6 +47,7 @@ export default class LineTool extends DrawTool {
         this.manager.addOp(this.op);
         this.op = new LineOp();
         this.manager.rerender();
+        this.manager.addColour(this.manager.strokeColour);
     }
 
     onPointerMove(e: PointerEvent): void {

@@ -1,4 +1,4 @@
-import { DrawOp, DrawTool, ToolType } from './DrawTypes';
+import { DrawOp, DrawTool, IconType, ToolType } from './DrawTypes';
 
 class RectangleOp implements DrawOp {
     isFullRender = false;
@@ -25,6 +25,7 @@ class RectangleOp implements DrawOp {
 export default class RectangleTool extends DrawTool {
     type = ToolType.rectangle;
     name = 'Rectangle';
+    icon: IconType = 'rectangle';
     op = new RectangleOp();
     isActive = false;
 
@@ -50,6 +51,7 @@ export default class RectangleTool extends DrawTool {
         this.manager.addOp(this.op);
         this.op = new RectangleOp();
         this.manager.rerender();
+        this.manager.addColour(this.manager.strokeColour);
     }
 
     onPointerMove(e: PointerEvent): void {

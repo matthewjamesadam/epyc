@@ -1,4 +1,4 @@
-import { DrawOp, DrawTool, ToolType } from './DrawTypes';
+import { DrawOp, DrawTool, IconType, ToolType } from './DrawTypes';
 import * as React from 'react';
 import TextToolInput from './TextToolInput';
 
@@ -36,6 +36,7 @@ const lineHeight = 16;
 export default class TextTool extends DrawTool {
     type = ToolType.text;
     name = 'Text';
+    icon: IconType = 'text';
     state = TextToolState.inactive;
     text = '';
     start: [number, number] = [0, 0];
@@ -72,6 +73,7 @@ export default class TextTool extends DrawTool {
             this.state = TextToolState.inactive;
 
             this.manager.addOp(op);
+            this.manager.addColour(this.manager.strokeColour);
         }
     }
 

@@ -1,4 +1,4 @@
-import { DrawOp, DrawTool, ToolType } from './DrawTypes';
+import { DrawOp, DrawTool, IconType, ToolType } from './DrawTypes';
 
 class FullCaptureOp implements DrawOp {
     isFullRender = true;
@@ -16,6 +16,7 @@ class FullCaptureOp implements DrawOp {
 export default class PaintTool extends DrawTool {
     type = ToolType.paint;
     name = 'Paint';
+    icon: IconType = 'paint';
 
     render(context: CanvasRenderingContext2D) {}
 
@@ -94,5 +95,6 @@ export default class PaintTool extends DrawTool {
         }
 
         this.manager.addOp(new FullCaptureOp(imageData));
+        this.manager.addColour(this.manager.strokeColour);
     }
 }

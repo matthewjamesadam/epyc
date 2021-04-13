@@ -1,8 +1,9 @@
-import { DrawTool, ToolType } from './DrawTypes';
+import { DrawTool, IconType, ToolType } from './DrawTypes';
 
 export default class DropperTool extends DrawTool {
     type = ToolType.dropper;
     name = 'Dropper';
+    icon: IconType = 'dropper';
 
     isActive = false;
 
@@ -33,5 +34,6 @@ export default class DropperTool extends DrawTool {
 
     onPointerUp(e: PointerEvent) {
         this.isActive = false;
+        this.manager.addColour(this.manager.strokeColour);
     }
 }

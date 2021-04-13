@@ -1,13 +1,23 @@
 import * as React from 'react';
-import { Alert, Button, ButtonGroup, Card, Overlay, Popover, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
-import { DrawTool, ToolType } from './DrawTypes';
+import {
+    Alert,
+    Button,
+    ButtonGroup,
+    ButtonProps,
+    Card,
+    Overlay,
+    OverlayTrigger,
+    Popover,
+    ToggleButton,
+    ToggleButtonProps,
+} from 'react-bootstrap';
+import { ToolType } from './DrawTypes';
 import { observer } from 'mobx-react-lite';
 import DrawManager from './DrawManager';
 import { HexColorPicker } from 'react-colorful';
 import { useAsyncAction } from './useAsyncAction';
 import { EpycApi } from './Apis';
-
-const fixedColours = ['#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff'];
+import Icon, { IconType } from './Icon';
 
 const lineWidths = [1, 3, 5, 10];
 
@@ -17,13 +27,103 @@ const rainbowStyle = {
     height: '5rem',
 };
 
+function PopupOverlay(props: React.PropsWithChildren<{ tooltip: string }>) {
+    return (
+        <OverlayTrigger
+            placement="top"
+            delay={{ show: 250, hide: 250 }}
+            overlay={
+                <Popover id="draw-popover">
+                    <Popover.Content>{props.tooltip}</Popover.Content>
+                </Popover>
+            }
+        >
+            {props.children}
+        </OverlayTrigger>
+    );
+}
+
+function ButtonIcon(props: { type: IconType }) {
+    return <Icon type={props.type} height="1rem" fill="currentColor" display="block" />;
+}
+
+interface ToolButtonBaseProps {
+    tooltip: string;
+    icon?: IconType;
+}
+function ToolButtonBase<ButtonProps>(
+    Type: React.ComponentType<ButtonProps>,
+    props: React.PropsWithChildren<ButtonProps & ToolButtonBaseProps>
+) {
+    const content = props.icon ? <Icon type={props.icon} /> : props.children;
+
+    return (
+        <OverlayTrigger
+            placement="top"
+            delay={{ show: 250, hide: 400 }}
+            overlay={
+                <Popover id="draw-popover">
+                    <Popover.Content>{props.tooltip}</Popover.Content>
+                </Popover>
+            }
+        >
+            <Type {...props}>{content}</Type>
+        </OverlayTrigger>
+    );
+}
+
+const ToolButton = (props: React.PropsWithChildren<ButtonProps & ToolButtonBaseProps>) => ToolButtonBase(Button, props);
+
+const ToolToggleButton = (props: React.PropsWithChildren<ToggleButtonProps & ToolButtonBaseProps>) =>
+    ToolButtonBase(ToggleButton, props);
+
+function ColourButton(props: { colour: string | null | undefined; isSelected: boolean; onClick: () => void }) {
+    const style: React.CSSProperties = {
+        width: '1.3rem',
+        height: '1.3rem',
+        position: 'relative',
+    };
+
+    const buttonStyle: React.CSSProperties = {
+        padding: '0',
+        overflow: 'hidden',
+        backgroundColor: props.colour || 'white',
+        flexGrow: 0,
+    };
+
+    const hilightNode = (
+        <div
+            style={{
+                position: 'absolute',
+                top: -3,
+                bottom: -3,
+                right: -3,
+                left: -3,
+                border: '3px solid #000000',
+                borderRadius: '.2rem',
+                zIndex: 5,
+            }}
+        />
+    );
+
+    const hilight = props.isSelected ? hilightNode : null;
+
+    if (props.isSelected) {
+        buttonStyle.overflow = 'inherit';
+    }
+
+    return (
+        <Button key={props.colour} variant="outline-dark" style={buttonStyle} onClick={props.onClick}>
+            <div style={style}>{hilight}</div>
+        </Button>
+    );
+}
+
 function Draw(props: { gameName: string; frameId: string; title: string; onDone: () => void }) {
     const [drawManager] = React.useState<DrawManager>(() => new DrawManager(props.gameName, props.frameId));
     const canvasRef = React.useCallback((r) => {
         drawManager.setCanvasRef(r);
     }, []);
-    const buttonTarget = React.useRef<HTMLButtonElement>(null);
-    const [isStrokeColourOpen, setIsStrokeColourOpen] = React.useState(false);
 
     const [uploadImage, isUploadingImage, uploadImageResult, uploadImageError] = useAsyncAction(async () => {
         const imageBlob = await drawManager?.getImage();
@@ -57,165 +157,157 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                     {drawManager?.toolChildren}
                 </div>
 
-                <div>
-                    <ToggleButtonGroup
-                        type="radio"
-                        name="tools"
-                        size="sm"
-                        value={drawManager?.selectedTool.type}
-                        className="mr-1 mb-1"
-                    >
+                <div className="d-flex flex-wrap align-items-start">
+                    <ButtonGroup toggle size="sm" className="mr-1 mb-1">
                         {drawManager?.tools.map((tool) => {
                             return (
-                                <ToggleButton
-                                    key={tool.type}
-                                    value={tool.type}
-                                    variant="outline-dark"
-                                    onClick={() => {
-                                        drawManager?.setSelectedTool(tool.type);
-                                    }}
-                                >
-                                    {tool.name}
-                                </ToggleButton>
+                                <PopupOverlay tooltip={tool.name}>
+                                    <ToggleButton
+                                        key={tool.type}
+                                        type="radio"
+                                        checked={tool.type === drawManager?.selectedTool.type}
+                                        variant="outline-dark"
+                                        onClick={() => {
+                                            drawManager?.setSelectedTool(tool.type);
+                                        }}
+                                    >
+                                        {tool.icon ? <ButtonIcon type={tool.icon} /> : tool.name}
+                                    </ToggleButton>
+                                </PopupOverlay>
                             );
                         })}
-                    </ToggleButtonGroup>
+                    </ButtonGroup>
 
-                    <ToggleButtonGroup
-                        type="radio"
-                        name="clipboard-tools"
-                        size="sm"
-                        value={drawManager?.selectedTool.type}
-                        className="mr-1 mb-1"
-                    >
-                        <ToggleButton
-                            value={ToolType.select}
-                            variant="outline-dark"
-                            onClick={() => {
-                                drawManager?.setSelectedTool(ToolType.select);
-                            }}
-                        >
-                            Select
-                        </ToggleButton>
+                    <ButtonGroup toggle size="sm" className="mr-1 mb-1">
+                        <PopupOverlay tooltip="Select">
+                            <ToggleButton
+                                type="radio"
+                                checked={drawManager?.selectedTool.type === ToolType.select}
+                                variant="outline-dark"
+                                onClick={() => {
+                                    drawManager?.setSelectedTool(ToolType.select);
+                                }}
+                            >
+                                <ButtonIcon type="select" />
+                            </ToggleButton>
+                        </PopupOverlay>
 
-                        <Button
-                            variant="outline-dark"
-                            disabled={drawManager?.copySource === null}
-                            onClick={() => {
-                                drawManager?.copy();
-                            }}
-                        >
-                            Copy
-                        </Button>
+                        <PopupOverlay tooltip="Copy">
+                            <Button
+                                variant="outline-dark"
+                                disabled={drawManager?.copySource === null}
+                                onClick={() => {
+                                    drawManager?.copy();
+                                }}
+                            >
+                                <ButtonIcon type="copy" />
+                            </Button>
+                        </PopupOverlay>
 
-                        <ToggleButton
-                            value={ToolType.paste}
-                            variant="outline-dark"
-                            disabled={drawManager?.copyData === null}
-                            onClick={() => {
-                                drawManager?.setSelectedTool(ToolType.paste);
-                            }}
-                        >
-                            Paste
-                        </ToggleButton>
-                    </ToggleButtonGroup>
+                        <PopupOverlay tooltip="Paste">
+                            <ToggleButton
+                                type="radio"
+                                checked={drawManager?.selectedTool.type === ToolType.paste}
+                                variant="outline-dark"
+                                disabled={drawManager?.copyData === null}
+                                onClick={() => {
+                                    drawManager?.setSelectedTool(ToolType.paste);
+                                }}
+                            >
+                                <ButtonIcon type="paste" />
+                            </ToggleButton>
+                        </PopupOverlay>
+                    </ButtonGroup>
 
-                    <ButtonGroup type="radio" name="tools" size="sm" className="mb-1">
-                        <Button
-                            disabled={(drawManager?.ops.length || 0) <= 0}
-                            variant="outline-primary"
-                            onClick={() => {
-                                drawManager?.undo();
-                            }}
-                        >
-                            Undo
-                        </Button>
+                    <ButtonGroup size="sm" className="mr-1 mb-1">
+                        <PopupOverlay tooltip="Undo">
+                            <Button
+                                disabled={(drawManager?.ops.length || 0) <= 0}
+                                variant="outline-primary"
+                                onClick={() => {
+                                    drawManager?.undo();
+                                }}
+                            >
+                                <ButtonIcon type="undo" />
+                            </Button>
+                        </PopupOverlay>
 
-                        <Button
-                            disabled={(drawManager?.redos.length || 0) <= 0}
-                            variant="outline-primary"
-                            onClick={() => {
-                                drawManager?.redo();
-                            }}
-                        >
-                            Redo
-                        </Button>
+                        <PopupOverlay tooltip="Redo">
+                            <Button
+                                disabled={(drawManager?.redos.length || 0) <= 0}
+                                variant="outline-primary"
+                                onClick={() => {
+                                    drawManager?.redo();
+                                }}
+                            >
+                                <ButtonIcon type="redo" />
+                            </Button>
+                        </PopupOverlay>
+                    </ButtonGroup>
+
+                    <ButtonGroup toggle size="sm" className="mr-1 mb-1">
+                        {lineWidths.map((lineWidth) => {
+                            return (
+                                <PopupOverlay tooltip="Line Width">
+                                    <ToggleButton
+                                        type="radio"
+                                        variant="outline-dark"
+                                        checked={drawManager?.lineWidth === lineWidth}
+                                        onClick={() => {
+                                            if (drawManager) drawManager.lineWidth = lineWidth;
+                                        }}
+                                    >
+                                        <div className="d-flex align-items-center" style={{ height: '1rem' }}>
+                                            <div
+                                                style={{ width: '1.0rem', height: lineWidth, background: '#000000' }}
+                                            />
+                                        </div>
+                                    </ToggleButton>
+                                </PopupOverlay>
+                            );
+                        })}
                     </ButtonGroup>
                 </div>
 
-                <div className="mb-2">
-                    <Button
-                        size="sm"
-                        className="mr-1 mb-1"
-                        ref={buttonTarget}
-                        onClick={() => setIsStrokeColourOpen(true)}
-                    >
-                        <div style={{ width: '1rem', height: '1rem', background: drawManager?.strokeColour }} />
-                    </Button>
+                <div className="mb-2 mt-2 d-flex">
+                    <div className="colour-picker mr-2">
+                        <HexColorPicker
+                            color={drawManager?.strokeColour}
+                            onChange={(colour) => {
+                                if (drawManager) drawManager.strokeColour = colour;
+                            }}
+                        />
+                    </div>
 
-                    <Overlay
-                        target={buttonTarget.current}
-                        show={isStrokeColourOpen}
-                        rootClose={true}
-                        onHide={() => setIsStrokeColourOpen(false)}
-                        placement="top"
-                    >
-                        <Popover>
-                            <div className="colour-picker">
-                                <HexColorPicker
-                                    color={drawManager?.strokeColour}
-                                    onChange={(colour) => {
-                                        if (drawManager) drawManager.strokeColour = colour;
-                                    }}
-                                />
-                            </div>
-                        </Popover>
-                    </Overlay>
+                    <div className="d-flex flex-column">
+                        <ButtonGroup size="sm" className="align-self-start flex-wrap align-content-start mb-2">
+                            {drawManager?.fixedColours.map((colour) => {
+                                return (
+                                    <ColourButton
+                                        colour={colour}
+                                        isSelected={drawManager.strokeColour === colour}
+                                        onClick={() => {
+                                            if (drawManager) drawManager.strokeColour = colour;
+                                        }}
+                                    />
+                                );
+                            })}
+                        </ButtonGroup>
 
-                    <ButtonGroup name="colour" size="sm" className="mr-1 mb-1">
-                        {fixedColours.map((colour) => {
-                            const style = {
-                                background: colour,
-                                width: '1rem',
-                                height: '1rem',
-                            };
-                            return (
-                                <Button
-                                    key={colour}
-                                    variant="outline-dark"
-                                    onClick={() => {
-                                        if (drawManager) drawManager.strokeColour = colour;
-                                    }}
-                                >
-                                    <div style={style} />
-                                </Button>
-                            );
-                        })}
-                    </ButtonGroup>
-
-                    <ToggleButtonGroup
-                        type="radio"
-                        name="colour"
-                        size="sm"
-                        className="mb-1"
-                        value={drawManager?.lineWidth}
-                    >
-                        {lineWidths.map((lineWidth) => {
-                            return (
-                                <ToggleButton
-                                    variant="outline-dark"
-                                    value={lineWidth}
-                                    onClick={() => {
-                                        if (drawManager) drawManager.lineWidth = lineWidth;
-                                    }}
-                                >
-                                    <div className="d-flex align-items-center" style={{ height: '1.0rem' }}>
-                                        <div style={{ width: '1.0rem', height: lineWidth, background: '#000000' }} />
-                                    </div>
-                                </ToggleButton>
-                            );
-                        })}
-                    </ToggleButtonGroup>
+                        <ButtonGroup size="sm" className="align-self-start flex-wrap align-content-start">
+                            {drawManager?.colours.map((colour) => {
+                                return (
+                                    <ColourButton
+                                        colour={colour}
+                                        isSelected={drawManager.strokeColour === colour}
+                                        onClick={() => {
+                                            if (colour && drawManager) drawManager.strokeColour = colour;
+                                        }}
+                                    />
+                                );
+                            })}
+                        </ButtonGroup>
+                    </div>
                 </div>
 
                 <div className="d-flex flex-column align-items-end">

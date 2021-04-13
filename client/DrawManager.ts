@@ -14,6 +14,27 @@ import DropperTool from './DropperTool';
 import SelectTool from './SelectTool';
 import PasteTool from './PasteTool';
 
+const colourSlots = 16;
+
+const fixedColours = [
+    '#000000',
+    '#0000AA',
+    '#00AA00',
+    '#00AAAA',
+    '#AA0000',
+    '#AA00AA',
+    '#AA5500',
+    '#AAAAAA',
+    '#555555',
+    '#5555FF',
+    '#55FF55',
+    '#55FFFF',
+    '#FF5555',
+    '#FF55FF',
+    '#FFFF55',
+    '#FFFFFF',
+];
+
 class ClearOp implements DrawOp {
     isFullRender = true;
     render(context: CanvasRenderingContext2D, width: number, height: number): void {
@@ -59,6 +80,10 @@ export default class DrawManager implements IDrawManager {
     @observable copyData: CopyDataSource | null = null;
 
     @observable.shallow toolChildren: React.ReactNode = React.createElement('div');
+
+    @observable colours = new Array<string | null>();
+
+    fixedColours = fixedColours;
 
     private lastSelectedTool: DrawTool;
     private gameName: string;
@@ -312,5 +337,19 @@ export default class DrawManager implements IDrawManager {
             });
             img.src = dataURL;
         });
+    }
+
+    addColour(colour: string) {
+        if (fixedColours.includes(colour)) {
+            return;
+        }
+
+        const idx = this.colours.indexOf(colour);
+        if (idx >= 0) {
+            this.colours.splice(idx, 1);
+        }
+
+        this.colours.splice(0, 0, colour);
+        this.colours.splice(colourSlots, this.colours.length - colourSlots);
     }
 }
