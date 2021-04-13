@@ -15,7 +15,6 @@ export abstract class DrawTool {
 
     onKeyPress(e: KeyboardEvent): void {}
 
-    onClick(e: MouseEvent): void {}
     onPointerDown(e: PointerEvent): void {}
     onPointerUp(e: PointerEvent): void {}
     onPointerMove(e: PointerEvent): void {}

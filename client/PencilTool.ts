@@ -7,7 +7,17 @@ class PencilOp implements DrawOp {
     lineWidth = 1;
 
     render(context: CanvasRenderingContext2D) {
-        if (this.points.length > 0) {
+        if (this.points.length === 1) {
+            context.beginPath();
+            context.moveTo(this.points[0][0], this.points[0][1]);
+            context.lineTo(this.points[0][0], this.points[0][1]);
+
+            context.strokeStyle = this.colour;
+            context.lineWidth = this.lineWidth;
+            context.stroke();
+        }
+
+        if (this.points.length > 1) {
             context.beginPath();
             context.moveTo(this.points[0][0], this.points[0][1]);
 
@@ -35,6 +45,8 @@ export default class PencilTool extends DrawTool {
         this.drawing = true;
         this.op.colour = this.manager.strokeColour;
         this.op.lineWidth = this.manager.lineWidth;
+        this.op.points.push([e.offsetX, e.offsetY]);
+        this.manager.rerender();
 
         this.manager.addColour(this.manager.strokeColour);
     }
