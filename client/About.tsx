@@ -2,6 +2,8 @@ import * as React from 'react';
 import { Quote } from './Quote';
 import { EmojiPerson } from './EmojiPerson';
 import { ResizingImg } from './ResizingImg';
+import { Button } from 'react-bootstrap';
+import Icon from './Icon';
 
 const SampleImage1 = require('./epyc-sample-1.png');
 const SampleImage2 = require('./epyc-sample-2.png');
@@ -27,7 +29,7 @@ export default function About() {
                     here
                 </a>
                 . It is kind of like the kid's game of Telephone, only with phrases alternating with pictures. You can
-                play the game with your friends on a Discord server. Here is an example game:
+                play the game with your friends on a Slack or Discord server. Here is an example game:
             </p>
 
             <h5>The first player starts the game with a phrase they think up:</h5>
@@ -56,13 +58,21 @@ export default function About() {
 
             <h3>Sounds Great, How Do I Play?</h3>
 
-            <p>
-                You can add the bot to your discord server by clicking on{' '}
-                <a href="https://discord.com/api/oauth2/authorize?client_id=799487868987899914&permissions=18432&scope=bot">
-                    this link
-                </a>
-                . Once the bot is in your Discord server, you can talk to the bot:
-            </p>
+            <p>You can add the bot to your Slack or Discord server by clicking on one of these two links:</p>
+
+            <div className="mb-4 d-flex align-items-center">
+                <Button href="/slack/install" className="mr-3 d-flex align-items-center" variant="outline-primary">
+                    <Icon type="slack" height="1.3rem" fill="currentColor" className="mr-2" />
+                    Install into Slack Workspace
+                </Button>
+                or
+                <Button href="/discord/install" className="ml-3 d-flex align-items-center" variant="outline-primary">
+                    <Icon type="discord" height="1.3rem" fill="currentColor" className="mr-2" />
+                    Install into Discord Server
+                </Button>
+            </div>
+
+            <p>Once the bot is in your server, you can talk to the bot:</p>
 
             <p>
                 <code className="border">@epyc help</code> -- get a list of commands.
