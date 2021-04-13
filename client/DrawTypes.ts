@@ -1,6 +1,10 @@
+import { IconType } from './Icon';
+export { IconType } from './Icon';
+
 export abstract class DrawTool {
     abstract type: ToolType;
     abstract name: string;
+    icon?: IconType;
 
     constructor(protected readonly manager: IDrawManager) {}
 
@@ -48,6 +52,8 @@ export interface IDrawManager {
     redo(): void;
 
     selectLastTool(): void;
+
+    addColour(colour: string): void;
 
     canvasRef: HTMLCanvasElement | null;
 

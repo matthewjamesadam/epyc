@@ -1,9 +1,9 @@
-import { observable } from 'mobx';
-import { CopySource, DrawTool, ToolType } from './DrawTypes';
+import { CopySource, DrawTool, IconType, ToolType } from './DrawTypes';
 
 export default class SelectTool extends DrawTool implements CopySource {
     type = ToolType.select;
     name = 'Select';
+    icon: IconType = 'select';
 
     points: [number, number, number, number] = [0, 0, 0, 0];
     isActive = false;

@@ -1,4 +1,4 @@
-import { DrawOp, DrawTool, ToolType } from './DrawTypes';
+import { DrawOp, DrawTool, IconType, ToolType } from './DrawTypes';
 
 class PencilOp implements DrawOp {
     isFullRender = false;
@@ -25,6 +25,7 @@ class PencilOp implements DrawOp {
 export default class PencilTool extends DrawTool {
     type = ToolType.pencil;
     name = 'Pencil';
+    icon: IconType = 'pencil';
 
     drawing = false;
 
@@ -34,6 +35,8 @@ export default class PencilTool extends DrawTool {
         this.drawing = true;
         this.op.colour = this.manager.strokeColour;
         this.op.lineWidth = this.manager.lineWidth;
+
+        this.manager.addColour(this.manager.strokeColour);
     }
 
     onPointerUp(e: PointerEvent) {

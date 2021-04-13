@@ -1,4 +1,4 @@
-import { DrawOp, DrawTool, ToolType } from './DrawTypes';
+import { DrawOp, DrawTool, IconType, ToolType } from './DrawTypes';
 
 class CircleOp implements DrawOp {
     isFullRender = false;
@@ -29,6 +29,7 @@ export default class CircleTool extends DrawTool {
     name = 'Circle';
     op = new CircleOp();
     isActive = false;
+    icon: IconType = 'circle';
 
     render(context: CanvasRenderingContext2D) {
         if (this.isActive) {
@@ -52,6 +53,7 @@ export default class CircleTool extends DrawTool {
         this.manager.addOp(this.op);
         this.op = new CircleOp();
         this.manager.rerender();
+        this.manager.addColour(this.manager.strokeColour);
     }
 
     onPointerMove(e: PointerEvent): void {
