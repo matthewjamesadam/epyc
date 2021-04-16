@@ -59,7 +59,6 @@ export interface IDrawManager {
     toolChildren: React.ReactNode;
 
     strokeColour: string;
-    fillColour: string;
     lineWidth: number;
 
     copySource: CopySource | null;

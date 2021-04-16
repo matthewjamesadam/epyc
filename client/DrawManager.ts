@@ -1,6 +1,6 @@
 import { CopyDataSource, CopySource, DrawOp, DrawTool, IDrawManager, ToolType } from './DrawTypes';
 import PencilTool from './PencilTool';
-import { makeObservable, observable } from 'mobx';
+import { action, makeObservable, observable, configure as mobxConfigure } from 'mobx';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
 import LineTool from './LineTool';
@@ -34,6 +34,11 @@ const fixedColours = [
     '#FFFF55',
     '#FFFFFF',
 ];
+
+mobxConfigure({
+    useProxies: 'always',
+    enforceActions: 'never',
+});
 
 class ClearOp implements DrawOp {
     isFullRender = true;
@@ -70,7 +75,6 @@ export default class DrawManager implements IDrawManager {
 
     @observable selectedTool: DrawTool;
     @observable strokeColour: string = '#000000';
-    @observable fillColour: string = '#ffffff';
     @observable lineWidth: number = 3;
 
     @observable ops = new Array<DrawOp>();
@@ -184,7 +188,7 @@ export default class DrawManager implements IDrawManager {
         e.preventDefault();
     }
 
-    setSelectedTool(type: ToolType) {
+    @action setSelectedTool(type: ToolType) {
         if (type === this.selectedTool.type) {
             return;
         }
@@ -272,7 +276,7 @@ export default class DrawManager implements IDrawManager {
         return await getImageBlob;
     }
 
-    addOp(op: DrawOp) {
+    @action addOp(op: DrawOp) {
         this.redos.length = 0;
         this.ops.push(op);
         this.rerender();
@@ -281,7 +285,7 @@ export default class DrawManager implements IDrawManager {
         this.saveWipData();
     }
 
-    undo() {
+    @action undo() {
         if (this.ops.length < 1) {
             return;
         }
@@ -293,7 +297,7 @@ export default class DrawManager implements IDrawManager {
         this.saveWipData();
     }
 
-    redo() {
+    @action redo() {
         if (this.redos.length < 1) {
             return;
         }
