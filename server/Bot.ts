@@ -1,5 +1,6 @@
 import { BotTarget, ChannelModel, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
+import { Logger } from './Logger';
 
 enum MessageStyle {
     normal,
@@ -201,7 +202,7 @@ export abstract class Bot implements IBot {
             if (error instanceof GameLogicError) {
                 this.sendMessage(channel, ...error.messageContent);
             } else {
-                console.log(error);
+                Logger.exception(error);
                 this.printIDunnoMessage(channel);
             }
         }

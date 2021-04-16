@@ -8,9 +8,10 @@ import CookieParser from 'cookie-parser';
 import { DiscordBot } from './DiscordBot';
 import { GameManager, GameManagerProvider } from './GameManager';
 import { SlackBot } from './SlackBot';
+import { Logger } from './Logger';
 
 let startDiscord = async (gameManager: GameManagerProvider): Promise<DiscordBot> => {
-    console.log('*** Starting Discord Bot');
+    Logger.log('*** Starting Discord Bot');
 
     let bot = new DiscordBot(gameManager);
     await bot.init();
@@ -18,7 +19,7 @@ let startDiscord = async (gameManager: GameManagerProvider): Promise<DiscordBot>
 };
 
 let startSlack = async (db: Db, gameManager: GameManagerProvider): Promise<SlackBot> => {
-    console.log('*** Starting Slack Bot');
+    Logger.log('*** Starting Slack Bot');
 
     let bot = new SlackBot(db, gameManager);
     await bot.init();
@@ -26,7 +27,7 @@ let startSlack = async (db: Db, gameManager: GameManagerProvider): Promise<Slack
 };
 
 let startDb = async () => {
-    console.log('*** Starting Database');
+    Logger.log('*** Starting Database');
 
     let db = Db.create();
     return db;
@@ -38,7 +39,7 @@ let startServer = async (
     slackBot: SlackBot,
     discordBot: DiscordBot
 ) => {
-    console.log('*** Starting Server');
+    Logger.log('*** Starting Server');
 
     let corsDomains = new Set<string>(['http://epyc.phlegmatic.ca', 'https://epyc.phlegmatic.ca']);
 
@@ -103,7 +104,7 @@ let startServer = async (
 
     app.listen(process.env.PORT || 3001);
 
-    console.log('*** Server Started');
+    Logger.log('*** Server Started');
 };
 
 let bootup = async () => {
@@ -117,7 +118,7 @@ let bootup = async () => {
 
         gameManagerProvider._gameManager = new GameManager(db, discordBot, slackBot);
     } catch (e) {
-        console.error(`Error occurred on startup: ${e}`);
+        Logger.exception(e, 'Error occurred on startup');
     }
 };
 

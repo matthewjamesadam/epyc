@@ -57,10 +57,7 @@ export class EpycApi extends EpycApiBase {
     }
 
     private logError(error: Error) {
-        console.log(`Caught error: ${error}`);
-        if (error.stack) {
-            console.log(error.stack);
-        }
+        console.error(error);
     }
 
     async getFramePlayData(params: GetFramePlayDataParams, context: Context): Promise<FramePlayData> {

@@ -1,10 +1,11 @@
 import { Db } from './Db';
 import { DiscordBot } from './DiscordBot';
 import { GameManager, GameManagerProvider } from './GameManager';
+import { Logger } from './Logger';
 import { SlackBot } from './SlackBot';
 
 const startDiscord = async (gameManager: GameManagerProvider): Promise<DiscordBot> => {
-    console.log('*** Starting Discord Bot');
+    Logger.log('*** Starting Discord Bot');
 
     let bot = new DiscordBot(gameManager);
     await bot.init();
@@ -12,7 +13,7 @@ const startDiscord = async (gameManager: GameManagerProvider): Promise<DiscordBo
 };
 
 let startSlack = async (db: Db, gameManager: GameManagerProvider): Promise<SlackBot> => {
-    console.log('*** Starting Slack Bot');
+    Logger.log('*** Starting Slack Bot');
 
     let bot = new SlackBot(db, gameManager);
     await bot.init();
@@ -20,7 +21,7 @@ let startSlack = async (db: Db, gameManager: GameManagerProvider): Promise<Slack
 };
 
 const startDb = async () => {
-    console.log('*** Starting Database');
+    Logger.log('*** Starting Database');
 
     let db = Db.create();
     return db;
@@ -35,9 +36,9 @@ const notify = async () => {
 
     gameManagerProvider._gameManager = new GameManager(db, discordBot, slackBot);
 
-    console.log('*** Sending Notifications');
+    Logger.log('*** Sending Notifications');
     await gameManagerProvider.gameManager.notifyPlayers();
-    console.log('*** Done Sending Notifications');
+    Logger.log('*** Done Sending Notifications');
 
     await discordBot.deinit();
     await db.deinit();
