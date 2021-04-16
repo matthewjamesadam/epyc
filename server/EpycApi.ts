@@ -15,6 +15,7 @@ import { Db, FrameModel, GameModel } from './Db';
 import { FramePlayData } from './api/models/FramePlayData';
 import ImageStore from './ImageStore';
 import { GameManagerProvider } from './GameManager';
+import { Logger } from './Logger';
 
 export class EpycApi extends EpycApiBase {
     constructor(private db: Db, private gameManagerProvider: GameManagerProvider) {
@@ -57,7 +58,7 @@ export class EpycApi extends EpycApiBase {
     }
 
     private logError(error: Error) {
-        console.error(error);
+        Logger.exception(error, 'Error occurred in EPYC API implementation');
     }
 
     async getFramePlayData(params: GetFramePlayDataParams, context: Context): Promise<FramePlayData> {

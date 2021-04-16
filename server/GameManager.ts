@@ -224,10 +224,17 @@ export class GameManager {
         await this.onFrameDone(game, frameIdx);
     }
 
-    private async pipeToStream(input: NodeJS.ReadableStream, output: NodeJS.WritableStream): Promise<void> {
+    private async pipeToStream(
+        input: NodeJS.ReadableStream,
+        output: NodeJS.WritableStream,
+        completionEvent: string = 'close'
+    ): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            output.on('finish', () => {
+            output.on(completionEvent, () => {
                 resolve();
+            });
+            input.on('error', (err) => {
+                reject(err);
             });
             output.on('error', (err) => {
                 reject(err);
@@ -270,12 +277,12 @@ export class GameManager {
                 return; // No avatar body?
             }
 
-            this.pipeToStream(avatarRequest.body, fileWriteStream);
+            await this.pipeToStream(avatarRequest.body, fileWriteStream);
 
             const fileReadStream1 = await fs.createReadStream(path);
             const cryptoStream = crypto.createHash('md5');
 
-            this.pipeToStream(fileReadStream1, cryptoStream);
+            await this.pipeToStream(fileReadStream1, cryptoStream, 'finish');
             const hash = cryptoStream.digest('hex');
 
             if (hash === person.avatar?.hash) {
