@@ -188,8 +188,13 @@ class ChannelLinkModel {
     @Serialize() public rhs: ChannelModel = new ChannelModel();
 }
 
+export interface GameQuery {
+    isComplete?: boolean;
+    channel?: ChannelModel;
+}
+
 export interface IDb {
-    getGames(query?: FilterQuery<any>): Promise<Array<GameModel>>;
+    getGames(query?: GameQuery): Promise<Array<GameModel>>;
     getGame(gameName: string): Promise<GameModel | undefined>;
     putGame(game: GameModel): Promise<void>;
 
@@ -204,8 +209,6 @@ export interface IDb {
     getInterest(channel: ChannelModel): Promise<PersonModel[]>;
     putInterest(person: PersonModel, channel: ChannelModel, isInterested: boolean): Promise<void>;
 }
-
-export interface IDb {}
 
 export class Db implements IDb {
     client: MongoDb.MongoClient;
@@ -271,8 +274,43 @@ export class Db implements IDb {
         await this.client.close();
     }
 
-    async getGames(query?: FilterQuery<any>): Promise<Array<GameModel>> {
-        let docs = await this.game.find(query).limit(50).toArray();
+    async getGamesForChannel(channel: ChannelModel, mongoQuery: MongoDb.FilterQuery<any>): Promise<any[]> {
+        // Do a separate query for each channel associated with this one
+        const channels = await this.resolveLinkedChannels(channel);
+
+        const allDocs = await Promise.all(
+            channels.map((channel) => {
+                const channelQuery = Object.assign(
+                    {
+                        'channel.id': channel.id,
+                        'channel.target': channel.target,
+                    },
+                    mongoQuery
+                );
+                return this.game.find(channelQuery).toArray();
+            })
+        );
+
+        return allDocs.flat();
+    }
+
+    async getGames(query?: GameQuery): Promise<GameModel[]> {
+        const mongoQuery: MongoDb.FilterQuery<any> = {};
+        if (query?.isComplete !== undefined && query?.isComplete !== null) {
+            mongoQuery.isComplete = query?.isComplete;
+        }
+
+        let docs: any[];
+
+        // Channel query -- this is separated because we have to first resolve linked channels
+        if (query?.channel) {
+            docs = await this.getGamesForChannel(query.channel, mongoQuery);
+        }
+
+        // Plain query
+        else {
+            docs = await this.game.find(mongoQuery).limit(50).toArray();
+        }
 
         let models = this.inflateArray(docs, GameModel);
         return models;

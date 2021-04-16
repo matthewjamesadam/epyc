@@ -9,6 +9,7 @@ import {
     FrameImageModel,
     FrameModel,
     GameModel,
+    GameQuery,
     IDb,
     PersonFrameRole,
     PersonModel,
@@ -52,7 +53,7 @@ class MockDb implements IDb {
     persons = new Map<string, PersonModel>();
     interests = new Array<{ channelId: string; target: BotTarget; personId: string }>();
 
-    async getGames(query?: FilterQuery<any>): Promise<GameModel[]> {
+    async getGames(query?: GameQuery): Promise<GameModel[]> {
         return Array.from(this.games.values());
     }
     async getGame(gameName: string): Promise<GameModel | undefined> {
