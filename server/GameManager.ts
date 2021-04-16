@@ -440,12 +440,10 @@ export class GameManager {
     }
 
     private async getGameStatuses(channel: ChannelModel): Promise<MessageContent> {
-        const query = {
+        const games = await this.db.getGames({
             isComplete: false,
-            'channel.id': channel.id,
-        };
-
-        const games = await (await this.db.getGames()).filter((game) => !game.isComplete);
+            channel,
+        });
 
         if (games.length === 0) {
             return [`${RandomEmoji('shrugger')} No games are in progress in this channel`];
@@ -642,7 +640,7 @@ export class GameManager {
     }
 
     async notifyPlayers(): Promise<void> {
-        const games = (await this.db.getGames()).filter((game) => !game.isComplete);
+        const games = await this.db.getGames({ isComplete: false });
 
         const promises = games.map((game) => this.notifyGame(game));
 

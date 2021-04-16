@@ -22,7 +22,7 @@ export class EpycApi extends EpycApiBase {
     }
 
     async getGames(context: Context): Promise<Array<Game>> {
-        const gameModels = (await this.db.getGames()).filter((game) => game.isComplete);
+        const gameModels = await this.db.getGames({ isComplete: true });
 
         // Don't return frames
         const games: Game[] = gameModels.map((game) => {
