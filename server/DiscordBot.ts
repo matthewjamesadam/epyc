@@ -3,6 +3,7 @@ import { Bot, PersonAvatar, PersonRef } from './Bot';
 import { BotTarget, ChannelModel, PersonModel } from './Db';
 import { GameManagerProvider } from './GameManager';
 import Express from 'express';
+import { Logger } from './Logger';
 
 export class DiscordBot extends Bot {
     client: Discord.Client;
@@ -19,7 +20,7 @@ export class DiscordBot extends Bot {
         }
 
         this.client.on('error', (err) => {
-            console.log(err);
+            Logger.exception(err);
         });
 
         this.client.on('message', (message) => {

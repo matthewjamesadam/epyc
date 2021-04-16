@@ -27,6 +27,7 @@ import { RandomEmoji } from './Emojis';
 import { v4 as uuid } from 'uuid';
 import ArrayUtils from './Utils';
 import Utils from './Utils';
+import { Logger } from './Logger';
 
 // Cheap IOC container
 export class GameManagerProvider {
@@ -132,7 +133,7 @@ export class GameManager {
         const frames: Array<FrameModel> = allPersons.map((person) => FrameModel.create(person.id));
 
         // FIXME -- for dev testing -- remove at some point!
-        if (!Cfg.isProduction) {
+        if (!Cfg.isProduction && frames.length > 0) {
             while (frames.length < 4) {
                 frames.push(FrameModel.create(frames[0].personId));
             }
@@ -149,7 +150,7 @@ export class GameManager {
         try {
             await this.db.putGame(game);
         } catch (error) {
-            console.log(error);
+            Logger.exception(error);
             throw new GameLogicError('Could not create game');
         }
 

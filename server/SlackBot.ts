@@ -1,5 +1,5 @@
 import { SocketModeClient } from '@slack/socket-mode';
-import { WebClient } from '@slack/web-api';
+import { WebAPICallResult, WebClient } from '@slack/web-api';
 import { InstallProvider } from '@slack/oauth';
 import { createEventAdapter, SlackEventAdapter } from '@slack/events-api';
 import { Bot, PersonAvatar, PersonRef } from './Bot';
@@ -10,6 +10,7 @@ import { RequestListener } from 'http';
 import { v4 as uuid } from 'uuid';
 import Express from 'express';
 import Utils from './Utils';
+import { Logger } from './Logger';
 
 const RE_TAG = new RegExp('<@(.+?)>', 'g');
 
@@ -60,7 +61,7 @@ export class SlackBot extends Bot {
                 },
             });
         } else {
-            console.log('SLACK_CLIENT_ID or SLACK_CLIENT_SECRET is undefined -- slack oauth disabled.');
+            Logger.log('SLACK_CLIENT_ID or SLACK_CLIENT_SECRET is undefined -- slack oauth disabled.');
         }
 
         if (Cfg.slackUseSocketApi) {
@@ -70,7 +71,7 @@ export class SlackBot extends Bot {
             // }
 
             if (!token) {
-                console.log('SLACK_SOCKET_TOKEN is undefined');
+                Logger.log('SLACK_SOCKET_TOKEN is undefined');
                 return;
             }
 
@@ -94,7 +95,7 @@ export class SlackBot extends Bot {
             // }
 
             if (!signingSecret) {
-                console.log('SLACK_REQUEST_SIGNING_SECRET is undefined');
+                Logger.log('SLACK_REQUEST_SIGNING_SECRET is undefined');
                 return;
             }
 
@@ -108,7 +109,7 @@ export class SlackBot extends Bot {
         }
 
         // this.client.on('error', (err) => {
-        //     console.log(err);
+        //     Logger.exception(err);
         // });
     }
 
@@ -226,11 +227,13 @@ export class SlackBot extends Bot {
 
         const teamToken = await this.getTeamToken(teamId);
         if (!teamToken) {
+            Logger.error(`No token available for team ${teamId} -- cannot process incoming message`);
             return;
         }
 
         const authorPerson = await this.resolvePersonRef(teamId, teamToken, authorId);
         if (!authorPerson) {
+            Logger.error(`Cannot resolve author for event ${teamId} ${authorId}`);
             return;
         }
 
@@ -270,10 +273,15 @@ export class SlackBot extends Bot {
 
         const token = await this.getTeamToken(teamId);
         if (!token) {
+            Logger.error(`No token available for team ${teamId} -- cannot send message to channel ${channel.id}`);
             return;
         }
 
-        await this.webClient.chat.postMessage({ token, text: content, channel: channelId });
+        try {
+            await this.webClient.chat.postMessage({ token, text: content, channel: channelId });
+        } catch (error) {
+            Logger.exception(error, `Could not send message to channel ${channel.id}`);
+        }
     }
 
     protected async sendStringDM(person: PersonModel, content: string): Promise<void> {
@@ -284,10 +292,15 @@ export class SlackBot extends Bot {
 
         const token = await this.getTeamToken(teamId);
         if (!token) {
+            Logger.error(`No token available for team ${teamId} -- cannot send DM to ${person.name} ${person.id}`);
             return;
         }
 
-        await this.webClient.chat.postMessage({ token, text: content, channel: userId });
+        try {
+            await this.webClient.chat.postMessage({ token, text: content, channel: userId });
+        } catch (error) {
+            Logger.exception(error, `Could not send DM to ${person.name} ${person.id}`);
+        }
     }
 
     protected toBold(content: string): string {
@@ -306,10 +319,22 @@ export class SlackBot extends Bot {
 
         const token = await this.getTeamToken(teamId);
         if (!token) {
+            Logger.error(
+                `No token available for team ${teamId} -- cannot get avatar for person ${person.name} ${person.id}`
+            );
             return;
         }
 
-        const user = await this.webClient.users.info({ token, user: userId });
+        let user: WebAPICallResult;
+        try {
+            user = await this.webClient.users.info({ token, user: userId });
+        } catch (error) {
+            Logger.exception(
+                error,
+                `Could not get information for person ${person.name} ${person.id} -- cannot get avatar`
+            );
+            return;
+        }
 
         if (user.ok) {
             const profile: any = user['user'];
