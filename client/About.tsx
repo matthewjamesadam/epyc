@@ -62,12 +62,12 @@ export default function About() {
 
             <div className="mb-4 d-flex align-items-center">
                 <Button href="/slack/install" className="mr-3 d-flex align-items-center" variant="outline-primary">
-                    <Icon type="slack" height="1.3rem" fill="currentColor" className="mr-2" />
+                    <Icon type="slack" style={{ height: '1.3rem' }} fill="currentColor" className="mr-2" />
                     Install into Slack Workspace
                 </Button>
                 or
                 <Button href="/discord/install" className="ml-3 d-flex align-items-center" variant="outline-primary">
-                    <Icon type="discord" height="1.3rem" fill="currentColor" className="mr-2" />
+                    <Icon type="discord" style={{ height: '1.3rem' }} fill="currentColor" className="mr-2" />
                     Install into Discord Server
                 </Button>
             </div>

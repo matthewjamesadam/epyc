@@ -44,7 +44,7 @@ function PopupOverlay(props: React.PropsWithChildren<{ tooltip: string }>) {
 }
 
 function ButtonIcon(props: { type: IconType }) {
-    return <Icon type={props.type} height="1rem" fill="currentColor" display="block" />;
+    return <Icon type={props.type} style={{ height: '1rem' }} fill="currentColor" display="block" />;
 }
 
 interface ToolButtonBaseProps {
@@ -161,9 +161,8 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                     <ButtonGroup toggle size="sm" className="mr-1 mb-1">
                         {drawManager?.tools.map((tool) => {
                             return (
-                                <PopupOverlay tooltip={tool.name}>
+                                <PopupOverlay key={tool.type} tooltip={tool.name}>
                                     <ToggleButton
-                                        key={tool.type}
                                         type="radio"
                                         checked={tool.type === drawManager?.selectedTool.type}
                                         variant="outline-dark"
@@ -248,7 +247,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                     <ButtonGroup toggle size="sm" className="mr-1 mb-1">
                         {lineWidths.map((lineWidth) => {
                             return (
-                                <PopupOverlay tooltip="Line Width">
+                                <PopupOverlay key={lineWidth} tooltip="Line Width">
                                     <ToggleButton
                                         type="radio"
                                         variant="outline-dark"
@@ -281,9 +280,10 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
 
                     <div className="d-flex flex-column">
                         <ButtonGroup size="sm" className="align-self-start flex-wrap align-content-start mb-2">
-                            {drawManager?.fixedColours.map((colour) => {
+                            {drawManager?.fixedColours.map((colour, idx) => {
                                 return (
                                     <ColourButton
+                                        key={idx}
                                         colour={colour}
                                         isSelected={drawManager.strokeColour === colour}
                                         onClick={() => {
@@ -295,9 +295,10 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         </ButtonGroup>
 
                         <ButtonGroup size="sm" className="align-self-start flex-wrap align-content-start">
-                            {drawManager?.colours.map((colour) => {
+                            {drawManager?.colours.map((colour, idx) => {
                                 return (
                                     <ColourButton
+                                        key={idx}
                                         colour={colour}
                                         isSelected={drawManager.strokeColour === colour}
                                         onClick={() => {
