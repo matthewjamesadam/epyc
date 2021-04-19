@@ -502,7 +502,16 @@ export class GameManager {
             this.getGameStatuses(channel),
             this.getAvailableStatuses(channel),
         ]);
-        await this.sendMessage(channel, ...gameMessages, ...availableMessages);
+
+        const channelUrl = `${this.urlBase}/games/${channel.target}/${channel.id}`;
+
+        await this.sendMessage(
+            channel,
+            ...gameMessages,
+            ...availableMessages,
+            '\n',
+            `🖼 To see previous games for this channel click here: ${channelUrl}`
+        );
     }
 
     async joinGame(channel: ChannelModel, personRef: PersonRef, gameName: string): Promise<void> {

@@ -12,6 +12,15 @@ export enum BotTarget {
     slack = 'slack',
 }
 
+export function BotTargetFromString(value: string): BotTarget | undefined {
+    switch (value) {
+        case BotTarget.slack:
+            return BotTarget.slack;
+        case BotTarget.discord:
+            return BotTarget.discord;
+    }
+}
+
 export enum PersonFrameRole {
     author = 'author',
     artist = 'artist',

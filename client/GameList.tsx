@@ -3,6 +3,7 @@ import { Card, CardDeck, Container, Row, Col, Spinner } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useAsyncActionOnce } from './useAsyncAction';
 import { EpycApi, Game } from './Apis';
+import Error404 from './Error404';
 
 function EmptyGameCard() {
     return (
@@ -43,8 +44,8 @@ function GameCard(props: { game: Game }) {
     );
 }
 
-function GameList(props: { games: Game[] | null }) {
-    if (!props.games) return null;
+export default function GameList(props: { games: Game[] | null }) {
+    if (!props.games || props.games.length === 0) return <Error404 />;
 
     return (
         <Container>
@@ -57,10 +58,4 @@ function GameList(props: { games: Game[] | null }) {
             </Row>
         </Container>
     );
-}
-
-export default function () {
-    const [isFetchingGames, games, gamesErr] = useAsyncActionOnce(() => EpycApi.getGames());
-
-    return isFetchingGames ? <Spinner /> : <GameList games={games} />;
 }

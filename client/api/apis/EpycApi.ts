@@ -35,6 +35,11 @@ export interface GetGameRequest {
     gameName: string;
 }
 
+export interface GetGamesRequest {
+    channelId?: string;
+    channelService?: string;
+}
+
 export interface PutFrameImageRequest {
     gameName: string;
     frameId: string;
@@ -114,8 +119,16 @@ export class EpycApi extends runtime.BaseAPI {
 
     /**
      */
-    async getGamesRaw(): Promise<runtime.ApiResponse<Array<Game>>> {
+    async getGamesRaw(requestParameters: GetGamesRequest): Promise<runtime.ApiResponse<Array<Game>>> {
         const queryParameters: any = {};
+
+        if (requestParameters.channelId !== undefined) {
+            queryParameters['channelId'] = requestParameters.channelId;
+        }
+
+        if (requestParameters.channelService !== undefined) {
+            queryParameters['channelService'] = requestParameters.channelService;
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -131,8 +144,8 @@ export class EpycApi extends runtime.BaseAPI {
 
     /**
      */
-    async getGames(): Promise<Array<Game>> {
-        const response = await this.getGamesRaw();
+    async getGames(requestParameters: GetGamesRequest): Promise<Array<Game>> {
+        const response = await this.getGamesRaw(requestParameters);
         return await response.value();
     }
 
