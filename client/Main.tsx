@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import Error404 from './Error404';
 import { useAsyncActionOnce } from './useAsyncAction';
 import { EpycApi } from './Apis';
-import GameList from './GameList';
+import AllGameList from './AllGameList';
 import Draw from './Draw';
 import Play from './Play';
 import PlayDone from './PlayDone';
@@ -14,6 +14,7 @@ import Game from './Game';
 import About from './About';
 import Title from './Title';
 import Icon from './Icon';
+import ChannelGameList from './ChannelGameList';
 
 export default function () {
     return (
@@ -88,8 +89,20 @@ export default function () {
                     }}
                 />
 
+                <Route
+                    path="/games/:service/:channelId"
+                    render={(props) => {
+                        return (
+                            <ChannelGameList
+                                channelId={props.match.params.channelId}
+                                channelTarget={props.match.params.service}
+                            />
+                        );
+                    }}
+                />
+
                 <Route path="/" exact={true}>
-                    <GameList />
+                    <AllGameList />
                 </Route>
 
                 <Route path="*">

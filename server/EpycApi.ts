@@ -10,8 +10,9 @@ import {
     GetGameParams,
     PutFrameImageParams,
     PutFrameTitleParams,
+    GetGamesParams,
 } from './api';
-import { Db, FrameModel, GameModel } from './Db';
+import { ChannelModel, Db, BotTargetFromString, GameQuery } from './Db';
 import { FramePlayData } from './api/models/FramePlayData';
 import ImageStore from './ImageStore';
 import { GameManagerProvider } from './GameManager';
@@ -22,8 +23,16 @@ export class EpycApi extends EpycApiBase {
         super();
     }
 
-    async getGames(context: Context): Promise<Array<Game>> {
-        const gameModels = await this.db.getGames({ isComplete: true });
+    protected async getGames(params: GetGamesParams, context: Context): Promise<Game[]> {
+        const gameQuery: GameQuery = { isComplete: true };
+        if (params.channelId && params.channelService) {
+            const botTarget = BotTargetFromString(params.channelService);
+            if (botTarget) {
+                gameQuery.channel = ChannelModel.create(params.channelId, '', botTarget);
+            }
+        }
+
+        const gameModels = await this.db.getGames(gameQuery);
 
         // Don't return frames
         const games: Game[] = gameModels.map((game) => {
@@ -37,7 +46,7 @@ export class EpycApi extends EpycApiBase {
         return games;
     }
 
-    async getGame(params: GetGameParams, context: Context): Promise<Game> {
+    protected async getGame(params: GetGameParams, context: Context): Promise<Game> {
         const model = await this.db.getGame(params.gameName);
         if (!model || !model.isComplete) {
             throw new HttpError(401);
@@ -61,7 +70,7 @@ export class EpycApi extends EpycApiBase {
         Logger.exception(error, 'Error occurred in EPYC API implementation');
     }
 
-    async getFramePlayData(params: GetFramePlayDataParams, context: Context): Promise<FramePlayData> {
+    protected async getFramePlayData(params: GetFramePlayDataParams, context: Context): Promise<FramePlayData> {
         try {
             return await this.gameManagerProvider.gameManager.getFramePlayData(params.gameName, params.frameId);
         } catch (error) {
@@ -70,7 +79,7 @@ export class EpycApi extends EpycApiBase {
         }
     }
 
-    async putFrameTitle(params: PutFrameTitleParams, context: Context): Promise<void> {
+    protected async putFrameTitle(params: PutFrameTitleParams, context: Context): Promise<void> {
         try {
             return await this.gameManagerProvider.gameManager.playTitleTurn(
                 params.gameName,
@@ -83,7 +92,7 @@ export class EpycApi extends EpycApiBase {
         }
     }
 
-    async putFrameImage(params: PutFrameImageParams, context: Context): Promise<void> {
+    protected async putFrameImage(params: PutFrameImageParams, context: Context): Promise<void> {
         try {
             return await this.gameManagerProvider.gameManager.playImageTurn(
                 params.gameName,

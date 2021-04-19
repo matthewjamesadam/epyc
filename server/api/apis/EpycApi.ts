@@ -35,6 +35,10 @@ export interface GetFramePlayDataParams {
 export interface GetGameParams {
      gameName: string;
 }
+export interface GetGamesParams {
+     channelId?: string;
+     channelService?: string;
+}
 export interface PutFrameImageParams {
      gameName: string;
      frameId: string;
@@ -63,7 +67,7 @@ export abstract class EpycApiBase {
 
     /**
      */
-    protected abstract getGames(context: runtime.Context): Promise<Array<Game>>;
+    protected abstract getGames(params: GetGamesParams, context: runtime.Context): Promise<Array<Game>>;
 
     /**
      */
@@ -177,13 +181,28 @@ export abstract class EpycApiBase {
 
         const context: runtime.Context = {req, res};
 
+        var channelId
+        if (req.query.channelId !== undefined) {
+             channelId = req.query.channelId.toString();
+        }
+
+        var channelService
+        if (req.query.channelService !== undefined) {
+             channelService = req.query.channelService.toString();
+        }
 
 
 
 
 
 
-        const response = await this.getGames(context);
+        let params: GetGamesParams = {
+            channelId,
+            channelService,
+        }
+
+        const response = await this.getGames(params, context);
+
 
         res.json(response);
 

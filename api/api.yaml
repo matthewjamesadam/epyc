@@ -20,7 +20,15 @@ paths:
       summary: ''
       description: ''
       operationId: getGames
-      parameters: []
+      parameters:
+        - in: query
+          name: channelId
+          schema:
+            type: string
+        - in: query
+          name: channelService
+          schema:
+            type: string
       responses:
         '200':
           description: successful operation
