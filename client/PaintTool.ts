@@ -13,6 +13,12 @@ class FullCaptureOp implements DrawOp {
     }
 }
 
+// Fuzzy matching values
+// The first is how much an individual colour channel can vary before we consider it a different colour
+// The second is how much the summed channels can vary
+const maxElementOffset = 35;
+const maxTotalOffset = 70;
+
 export default class PaintTool extends DrawTool {
     type = ToolType.paint;
     name = 'Paint';
@@ -64,6 +70,21 @@ export default class PaintTool extends DrawTool {
             imageData.data[imageIdx(e.offsetX, e.offsetY) + 3],
         ];
 
+        const colourMatch = (idx: number) => {
+            const diff0 = Math.abs(imageData.data[idx] - bgColours[0]);
+            const diff1 = Math.abs(imageData.data[idx + 1] - bgColours[1]);
+            const diff2 = Math.abs(imageData.data[idx + 2] - bgColours[2]);
+            const diff3 = Math.abs(imageData.data[idx + 3] - bgColours[3]);
+
+            return (
+                diff0 < maxElementOffset &&
+                diff1 < maxElementOffset &&
+                diff2 < maxElementOffset &&
+                diff3 < maxElementOffset &&
+                diff0 + diff1 + diff2 + diff3 < maxTotalOffset
+            );
+        };
+
         while (true) {
             const thisOne = toVisit.pop();
             if (!thisOne) {
@@ -74,12 +95,7 @@ export default class PaintTool extends DrawTool {
 
             const thisImageIdx = imageIdx(thisOne[0], thisOne[1]);
 
-            if (
-                imageData.data[thisImageIdx] !== bgColours[0] ||
-                imageData.data[thisImageIdx + 1] !== bgColours[1] ||
-                imageData.data[thisImageIdx + 2] !== bgColours[2] ||
-                imageData.data[thisImageIdx + 3] !== bgColours[3]
-            ) {
+            if (!colourMatch(thisImageIdx)) {
                 continue;
             }
 
