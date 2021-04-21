@@ -401,7 +401,7 @@ export class Db implements IDb {
         slackToken.teamId = teamId;
         slackToken.installation = installation;
 
-        await this.slackToken.replaceOne({ id: teamId }, deflate(slackToken), { upsert: true });
+        await this.slackToken.replaceOne({ _id: teamId }, deflate(slackToken), { upsert: true });
     }
 
     private async resolveLinkedChannels(channel: ChannelModel): Promise<ChannelModel[]> {
