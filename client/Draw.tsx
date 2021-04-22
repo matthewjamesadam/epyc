@@ -166,7 +166,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                                         type="radio"
                                         checked={tool.type === drawManager?.selectedTool.type}
                                         variant="outline-dark"
-                                        onClick={() => {
+                                        onChange={() => {
                                             drawManager?.setSelectedTool(tool.type);
                                         }}
                                     >
@@ -183,7 +183,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                                 type="radio"
                                 checked={drawManager?.selectedTool.type === ToolType.select}
                                 variant="outline-dark"
-                                onClick={() => {
+                                onChange={() => {
                                     drawManager?.setSelectedTool(ToolType.select);
                                 }}
                             >
@@ -209,7 +209,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                                 checked={drawManager?.selectedTool.type === ToolType.paste}
                                 variant="outline-dark"
                                 disabled={drawManager?.copyData === null}
-                                onClick={() => {
+                                onChange={() => {
                                     drawManager?.setSelectedTool(ToolType.paste);
                                 }}
                             >
@@ -252,7 +252,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                                         type="radio"
                                         variant="outline-dark"
                                         checked={drawManager?.lineWidth === lineWidth}
-                                        onClick={() => {
+                                        onChange={() => {
                                             if (drawManager) drawManager.lineWidth = lineWidth;
                                         }}
                                     >

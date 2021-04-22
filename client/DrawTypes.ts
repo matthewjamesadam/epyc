@@ -5,6 +5,7 @@ export abstract class DrawTool {
     abstract type: ToolType;
     abstract name: string;
     icon?: IconType;
+    isSelectable: boolean = true;
 
     constructor(protected readonly manager: IDrawManager) {}
 
@@ -36,6 +37,7 @@ export enum ToolType {
     select,
     copy,
     paste,
+    clear,
 }
 
 export interface CopySource {

@@ -93,11 +93,6 @@ export default class PasteTool extends DrawTool {
             e.offsetY < this.op.y + this.op.imageData.height
         ) {
             this.draggingPoint = [e.offsetX, e.offsetY];
-        } else if (this.op) {
-            this.manager.addOp(this.op);
-            this.isActive = false;
-            this.manager.rerender();
-            // this.manager.selectLastTool();
         }
     }
 
@@ -112,6 +107,14 @@ export default class PasteTool extends DrawTool {
     }
 
     onPointerUp(e: PointerEvent) {
+        if (this.op && !this.draggingPoint) {
+            this.manager.addOp(this.op);
+            this.isActive = false;
+            this.manager.rerender();
+
+            this.manager.selectLastTool();
+        }
+
         this.draggingPoint = null;
     }
 }
