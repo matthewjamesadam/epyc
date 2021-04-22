@@ -13,6 +13,7 @@ import RectangleTool from './RectangleTool';
 import DropperTool from './DropperTool';
 import SelectTool from './SelectTool';
 import PasteTool from './PasteTool';
+import ClearTool from './ClearTool';
 
 const colourSlots = 16;
 
@@ -67,6 +68,7 @@ export default class DrawManager implements IDrawManager {
         new PaintTool(this),
         new TextTool(this),
         new DropperTool(this),
+        new ClearTool(this),
     ];
 
     editTools = [new SelectTool(this), new PasteTool(this)];
@@ -189,7 +191,17 @@ export default class DrawManager implements IDrawManager {
     }
 
     @action setSelectedTool(type: ToolType) {
-        if (type === this.selectedTool.type) {
+        const newTool =
+            this.tools.find((tool) => tool.type === type) ||
+            this.editTools.find((tool) => tool.type === type) ||
+            this.selectedTool;
+
+        if (newTool.type === this.selectedTool.type) {
+            return;
+        }
+
+        if (!newTool.isSelectable) {
+            newTool.onActivate();
             return;
         }
 
@@ -198,10 +210,7 @@ export default class DrawManager implements IDrawManager {
         this.lastSelectedTool = this.selectedTool;
 
         this.toolChildren = null;
-        this.selectedTool =
-            this.tools.find((tool) => tool.type === type) ||
-            this.editTools.find((tool) => tool.type === type) ||
-            this.selectedTool;
+        this.selectedTool = newTool;
         this.selectedTool.onActivate();
         this.rerender();
     }
