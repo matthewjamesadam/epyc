@@ -1,6 +1,6 @@
 import { CopyDataSource, CopySource, DrawOp, DrawTool, IDrawManager, ToolType } from './DrawTypes';
 import PencilTool from './PencilTool';
-import { action, makeObservable, observable, configure as mobxConfigure } from 'mobx';
+import { action, makeObservable, observable, configure as mobxConfigure, computed } from 'mobx';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 
 import LineTool from './LineTool';
@@ -87,7 +87,7 @@ export default class DrawManager implements IDrawManager {
 
     @observable.shallow toolChildren: React.ReactNode = React.createElement('div');
 
-    @observable colours = new Array<string | null>();
+    @observable private customColours = new Array<string>();
 
     fixedColours = fixedColours;
 
@@ -367,12 +367,28 @@ export default class DrawManager implements IDrawManager {
             return;
         }
 
-        const idx = this.colours.indexOf(colour);
+        const idx = this.customColours.indexOf(colour);
         if (idx >= 0) {
-            this.colours.splice(idx, 1);
+            this.customColours.splice(idx, 1);
         }
 
-        this.colours.splice(0, 0, colour);
-        this.colours.splice(colourSlots, this.colours.length - colourSlots);
+        this.customColours.splice(0, 0, colour);
+        this.customColours.splice(colourSlots, this.customColours.length - colourSlots);
+    }
+
+    @computed get colours(): string[] {
+        if (this.fixedColours.includes(this.strokeColour)) {
+            return this.customColours;
+        }
+
+        if (this.customColours.length === 0) {
+            return [this.strokeColour];
+        }
+
+        if (this.customColours.includes(this.strokeColour)) {
+            return this.customColours;
+        }
+
+        return [this.strokeColour, ...this.customColours];
     }
 }
