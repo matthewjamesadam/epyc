@@ -33,6 +33,11 @@ export default class PaintTool extends DrawTool {
             return;
         }
 
+        const canvasWidth = Math.floor(canvas.width);
+        const canvasHeight = Math.floor(canvas.height);
+        const offsetX = Math.floor(e.offsetX);
+        const offsetY = Math.floor(e.offsetY);
+
         // FIXME: Cheap parsing code, fix this at some point
         const colour = this.manager.strokeColour;
         const colours = [
@@ -42,16 +47,16 @@ export default class PaintTool extends DrawTool {
             255,
         ];
 
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
 
-        const visited = new Array<boolean>(canvas.width * canvas.height);
+        const visited = new Array<boolean>(canvasWidth * canvasHeight);
         visited.fill(false);
 
         const toVisit = new Array<[number, number]>();
-        toVisit.push([e.offsetX, e.offsetY]);
+        toVisit.push([offsetX, offsetY]);
 
         const visitedIdx = (x: number, y: number) => {
-            return y * canvas.width + x;
+            return y * canvasWidth + x;
         };
         const imageIdx = (x: number, y: number) => {
             return (y * imageData.width + x) * 4;
@@ -63,11 +68,12 @@ export default class PaintTool extends DrawTool {
             }
         };
 
+        const bgIdx = imageIdx(offsetX, offsetY);
         const bgColours = [
-            imageData.data[imageIdx(e.offsetX, e.offsetY)],
-            imageData.data[imageIdx(e.offsetX, e.offsetY) + 1],
-            imageData.data[imageIdx(e.offsetX, e.offsetY) + 2],
-            imageData.data[imageIdx(e.offsetX, e.offsetY) + 3],
+            imageData.data[bgIdx],
+            imageData.data[bgIdx + 1],
+            imageData.data[bgIdx + 2],
+            imageData.data[bgIdx + 3],
         ];
 
         const colourMatch = (idx: number) => {
