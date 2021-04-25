@@ -53,7 +53,6 @@ export default class PencilTool extends DrawTool {
 
     onPointerUp(e: PointerEvent) {
         this.drawing = false;
-        console.log(`*** Stuff: ${this.op.points.length}`);
         this.manager.addOp(this.op);
         this.op = new PencilOp();
     }
