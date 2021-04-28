@@ -60,6 +60,12 @@ export class GameManager {
                 }
             }
 
+            // Update name if it's changed
+            if (dbPerson.name !== person.name) {
+                dbPerson.name = person.name;
+                await this.db.putPerson(dbPerson);
+            }
+
             return dbPerson;
         }
 
