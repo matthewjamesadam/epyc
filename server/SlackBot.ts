@@ -199,17 +199,19 @@ export class SlackBot extends Bot {
     }
 
     private async resolvePersonRef(teamId: string, teamToken: string, userId: string): Promise<PersonRef | undefined> {
-        const user = await this.webClient.users.info({ token: teamToken, user: userId });
+        const result = await this.webClient.users.info({ token: teamToken, user: userId });
 
-        if (user.ok) {
-            const profile: any = user['user'];
-            if (!profile || typeof profile !== 'object') {
+        if (result.ok) {
+            const user: any = result['user'];
+            if (!user || typeof user !== 'object') {
                 return;
             }
 
+            const name = user.profile?.display_name || user.profile?.real_name || user.name;
+
             return {
                 id: this.makeId(teamId, userId),
-                name: this.parseString(profile?.name) || '',
+                name: this.parseString(name) || '',
                 target: BotTarget.slack,
             };
         }
