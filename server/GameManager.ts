@@ -162,7 +162,7 @@ export class GameManager {
 
         let firstPerson = allPersons[0];
 
-        this.sendMessage(
+        await this.sendMessage(
             channel,
             `Game `,
             Bold(game.name),
@@ -170,7 +170,7 @@ export class GameManager {
             Bold(firstPerson.name),
             `'s turn.`
         );
-        this.sendFrameMessage(game, frames[0], firstPerson);
+        await this.sendFrameMessage(game, frames[0], firstPerson);
 
         return game;
     }
@@ -415,10 +415,11 @@ export class GameManager {
 
     async sendFrameMessage(game: GameModel, frame: FrameModel, person: PersonModel | undefined) {
         if (!person) {
+            Logger.error(`Could not send frame message for game ${game.name}`);
             return;
         }
 
-        this.sendDM(
+        await this.sendDM(
             person,
             `It's your turn to play Eat Poop You Cat on game `,
             Bold(game.name),
