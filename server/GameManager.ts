@@ -537,6 +537,13 @@ export class GameManager {
         }
 
         game.frames.push(FrameModel.create(person.id));
+
+        // See if we need to shuffle player into the remaining spots
+        const currentFrameIdx = game.frames.findIndex((frame) => !frame.isComplete);
+        if (currentFrameIdx >= 0) {
+            await this.fulfillRemainingPlayerConstraints(game, currentFrameIdx + 1);
+        }
+
         await this.db.putGame(game);
 
         this.sendMessage(channel, 'OK ', Bold(person.name), ', you are now in game ', Bold(gameName));
@@ -550,14 +557,22 @@ export class GameManager {
             return; // Game is over
         }
 
+        await this.fulfillRemainingPlayerConstraints(game, nextPlayerIdx);
+    }
+
+    private async fulfillRemainingPlayerConstraints(game: GameModel, startingIdx: number) {
+        if (startingIdx + 1 >= game.frames.length) {
+            return; // No more frames to shuffle, no action to take
+        }
+
         const remaining = await Promise.all(
-            game.frames.slice(nextPlayerIdx).map((frame) => this.db.getPerson(frame.personId))
+            game.frames.slice(startingIdx).map((frame) => this.db.getPerson(frame.personId))
         );
 
         if (remaining.every((person) => !!person)) {
-            const remainingPeople = this.fulfillPlayerConstraints(remaining.filter(Utils.notNull), nextPlayerIdx);
+            const remainingPeople = this.fulfillPlayerConstraints(remaining.filter(Utils.notNull), startingIdx);
             const remainingFrames = remainingPeople.map((person) => FrameModel.create(person.id));
-            game.frames = game.frames.slice(0, nextPlayerIdx).concat(remainingFrames);
+            game.frames = game.frames.slice(0, startingIdx).concat(remainingFrames);
         }
     }
 
