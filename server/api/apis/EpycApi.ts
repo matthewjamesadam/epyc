@@ -38,6 +38,8 @@ export interface GetGameParams {
 export interface GetGamesParams {
      channelId?: string;
      channelService?: string;
+     sampleSize?: number;
+     limit?: number;
 }
 export interface PutFrameImageParams {
      gameName: string;
@@ -191,6 +193,16 @@ export abstract class EpycApiBase {
              channelService = req.query.channelService.toString();
         }
 
+        var sampleSize
+        if (req.query.sampleSize !== undefined) {
+		sampleSize = Number(req.query.sampleSize.toString());
+        }
+
+        var limit
+        if (req.query.limit !== undefined) {
+		limit = Number(req.query.limit.toString());
+        }
+
 
 
 
@@ -199,6 +211,8 @@ export abstract class EpycApiBase {
         let params: GetGamesParams = {
             channelId,
             channelService,
+            sampleSize,
+            limit,
         }
 
         const response = await this.getGames(params, context);

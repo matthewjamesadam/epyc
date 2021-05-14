@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  NODE_VERSION: '14.x' # set this to the node version to use
+  NODE_VERSION: '16.x' # set this to the node version to use
   AWS_APP_NAME: 'epyc'
 
 jobs:

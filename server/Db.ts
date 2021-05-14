@@ -200,6 +200,8 @@ class ChannelLinkModel {
 export interface GameQuery {
     isComplete?: boolean;
     channel?: ChannelModel;
+    sampleSize?: number;
+    limit?: number;
 }
 
 export interface IDb {
@@ -316,9 +318,19 @@ export class Db implements IDb {
             docs = await this.getGamesForChannel(query.channel, mongoQuery);
         }
 
+        // Sample query
+        else if (query?.sampleSize) {
+            docs = await this.game
+                .aggregate([{ $match: mongoQuery }, { $sample: { size: query.sampleSize } }])
+                .toArray();
+        }
+
         // Plain query
         else {
-            docs = await this.game.find(mongoQuery).limit(50).toArray();
+            docs = await this.game
+                .find(mongoQuery)
+                .limit(Math.min(query?.limit || 50, 50))
+                .toArray();
         }
 
         let models = this.inflateArray(docs, GameModel);

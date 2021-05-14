@@ -29,6 +29,14 @@ paths:
           name: channelService
           schema:
             type: string
+        - in: query
+          name: sampleSize
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
       responses:
         '200':
           description: successful operation

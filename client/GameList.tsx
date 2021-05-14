@@ -48,14 +48,12 @@ export default function GameList(props: { games: Game[] | null }) {
     if (!props.games || props.games.length === 0) return <Error404 />;
 
     return (
-        <Container>
-            <Row>
-                {props.games.map((game) => (
-                    <Col key={game.name} lg={3} md={4} sm={6} xs={12} className="mb-5">
-                        <GameCard game={game} />
-                    </Col>
-                ))}
-            </Row>
-        </Container>
+        <Row>
+            {props.games.map((game) => (
+                <Col key={game.name} lg={3} md={4} sm={6} xs={12} className="mb-5">
+                    <GameCard game={game} />
+                </Col>
+            ))}
+        </Row>
     );
 }

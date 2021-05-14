@@ -2,7 +2,7 @@ import * as React from 'react';
 import GameList from './GameList';
 import { useAsyncActionOnce } from './useAsyncAction';
 import { EpycApi } from './Apis';
-import { Spinner } from 'react-bootstrap';
+import { Container, Spinner } from 'react-bootstrap';
 
 export default function AllGameList(props: { channelId: string; channelTarget: string }) {
     const [isFetchingGames, games, gamesErr] = useAsyncActionOnce(() =>
@@ -11,5 +11,11 @@ export default function AllGameList(props: { channelId: string; channelTarget: s
             channelService: props.channelTarget,
         })
     );
-    return isFetchingGames ? <Spinner /> : <GameList games={games} />;
+    return isFetchingGames ? (
+        <Spinner />
+    ) : (
+        <Container>
+            <GameList games={games} />
+        </Container>
+    );
 }
