@@ -13,8 +13,6 @@ export default function AllGameList() {
         return EpycApi.getGames(query);
     }, [type]);
 
-    // WRONG
-
     let content = (
         <Row>
             <Col>
