@@ -37,6 +37,22 @@
 }
 
 /*
+    Use if we want hilighted cards
+*/
+
+// .card:hover {
+//     border: 1px solid $link-hover-color;
+
+//     img {
+//         border-bottom: 1px solid $link-hover-color !important;
+//     }
+// }
+
+.nav-link-small {
+    padding: 0.15rem 0.4rem;
+}
+
+/*
     For colour picker controls
 */
 

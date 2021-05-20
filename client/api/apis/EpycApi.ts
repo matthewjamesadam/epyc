@@ -38,6 +38,8 @@ export interface GetGameRequest {
 export interface GetGamesRequest {
     channelId?: string;
     channelService?: string;
+    sampleSize?: number;
+    limit?: number;
 }
 
 export interface PutFrameImageRequest {
@@ -128,6 +130,14 @@ export class EpycApi extends runtime.BaseAPI {
 
         if (requestParameters.channelService !== undefined) {
             queryParameters['channelService'] = requestParameters.channelService;
+        }
+
+        if (requestParameters.sampleSize !== undefined) {
+            queryParameters['sampleSize'] = requestParameters.sampleSize;
+        }
+
+        if (requestParameters.limit !== undefined) {
+            queryParameters['limit'] = requestParameters.limit;
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

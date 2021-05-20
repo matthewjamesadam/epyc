@@ -24,7 +24,7 @@ export class EpycApi extends EpycApiBase {
     }
 
     protected async getGames(params: GetGamesParams, context: Context): Promise<Game[]> {
-        const gameQuery: GameQuery = { isComplete: true };
+        const gameQuery: GameQuery = { isComplete: true, sampleSize: params.sampleSize, limit: params.limit };
         if (params.channelId && params.channelService) {
             const botTarget = BotTargetFromString(params.channelService);
             if (botTarget) {
