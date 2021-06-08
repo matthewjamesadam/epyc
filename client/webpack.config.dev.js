@@ -8,7 +8,6 @@ const config = merge(common, {
 
     devServer: {
         historyApiFallback: true,
-        host: '0.0.0.0',
     },
 
     plugins: [
