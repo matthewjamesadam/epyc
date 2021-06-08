@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "dev",
+            "path": "client/",
+            "problemMatcher": [],
+            "label": "$(debug-alt) Client",
+            "detail": "webpack serve --open --config ./webpack.config.dev.js"
+        },
+        {
+            "type": "npm",
+            "script": "generate-api",
+            "path": "api/",
+            "problemMatcher": [],
+            "label": "$(rocket) API",
+            "detail": "npm run generate-client-api && npm run generate-server-api"
+        }
+    ]
+}

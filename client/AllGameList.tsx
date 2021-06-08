@@ -1,16 +1,49 @@
 import * as React from 'react';
 import GameList from './GameList';
 import { useAsyncActionNow } from './useAsyncAction';
-import { EpycApi } from './Apis';
+import { EpycApi, Game, GameFromJSON, GameToJSON } from './Apis';
 import { Container, Row, Col, Nav, Spinner } from 'react-bootstrap';
+import { useHistory } from 'react-router';
 
 type AllGameTypes = 'random' | 'recent';
 
+function DecodeGames(state: any): Game[] | undefined {
+    if (!state || !Array.isArray(state)) {
+        return undefined;
+    }
+
+    return state.map(GameFromJSON);
+}
+
+function EncodeGames(games: Game[]): any {
+    return games.map(GameToJSON);
+}
+
 export default function AllGameList() {
+    const history = useHistory();
     const [type, setType] = React.useState<AllGameTypes>('random');
-    const [isFetchingGames, games, gamesErr] = useAsyncActionNow(() => {
+
+    // This action fetches a set of random games from the service for display on the main page.  The problem is
+    // that this means when you navigate back and forth, a different set of games is displayed, which feels wrong.
+    // This block stores the fetched games in the state for the current history entry, which we can then
+    // reuse whenever we re-render this page.
+    const [isFetchingGames, games, gamesErr] = useAsyncActionNow(async () => {
+        // See if we previously stored games for this history -- if so, reuse it
+        const state: any = history.location.state;
+        const decodedState = DecodeGames(state?.[type]);
+
+        if (decodedState) {
+            return decodedState;
+        }
+
+        // No previously stored games.  Fetch from the service and store in history
         const query = type === 'random' ? { sampleSize: 25 } : { limit: 10 };
-        return EpycApi.getGames(query);
+        const games = await EpycApi.getGames(query);
+
+        const encodedState: any = {};
+        encodedState[type] = EncodeGames(games);
+        history.replace(history.location.pathname, encodedState);
+        return games;
     }, [type]);
 
     let content = (
