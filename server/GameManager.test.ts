@@ -14,6 +14,14 @@ import {
 import { GameManager } from './GameManager';
 import Utils from './Utils';
 
+// Mock ImageProcessor so we don't bring in Jimp, which fails in Jest tests :(
+// If unit tests ever actually
+jest.mock('./ImageProcessor', () => {
+    return function () {
+        return {};
+    };
+});
+
 class MockBot implements IBot {
     async sendMessage(channel: ChannelModel, ...content: MessageContent): Promise<void> {}
     async sendDM(person: PersonModel, ...content: MessageContent): Promise<void> {}
