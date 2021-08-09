@@ -10,7 +10,13 @@ export class DiscordBot extends Bot {
 
     constructor(gameManager: GameManagerProvider) {
         super(gameManager);
-        this.client = new Discord.Client();
+        this.client = new Discord.Client({
+            intents: [
+                Discord.Intents.FLAGS.GUILDS,
+                Discord.Intents.FLAGS.GUILD_MESSAGES,
+                Discord.Intents.FLAGS.DIRECT_MESSAGES,
+            ],
+        });
     }
 
     async init(): Promise<void> {
@@ -23,19 +29,25 @@ export class DiscordBot extends Bot {
             Logger.exception(err);
         });
 
-        this.client.on('message', (message) => {
+        this.client.on('messageCreate', (message) => {
+            // Match someone mentioning the bot
             if (message.mentions.users.has(this.client.user?.id || '')) {
+                this.processDiscordMessage(message);
+            }
+
+            // Match someone mentinoing the bot's role
+            else if (message.mentions.roles.some((role) => role.tags?.botId == this.client.user?.id)) {
                 this.processDiscordMessage(message);
             }
         });
 
         let promise = new Promise<void>((resolve) => {
-            this.client.on('ready', () => {
+            this.client.once('ready', () => {
                 resolve();
             });
         });
 
-        this.client.login(token);
+        await this.client.login(token);
         return promise;
     }
 
@@ -44,7 +56,7 @@ export class DiscordBot extends Bot {
     }
 
     processDiscordMessage(message: Discord.Message) {
-        let channelName = message.channel.type === 'text' ? message.channel.name : '';
+        let channelName = message.channel.type === 'GUILD_TEXT' ? message.channel.name : '';
         const channel = ChannelModel.create(message.channel.id, channelName, BotTarget.discord);
         const person = { id: message.author.id, target: BotTarget.discord, name: message.author.username };
 
@@ -57,6 +69,11 @@ export class DiscordBot extends Bot {
 
     protected async sendStringMessage(channel: ChannelModel, content: string): Promise<void> {
         let discordChannel = await this.client.channels.fetch(channel.id);
+        if (!discordChannel) {
+            throw new Error('Channel is null'); // Should never happen, really
+            return;
+        }
+
         if (!discordChannel.isText) {
             throw new Error('Channel is not a text channel'); // Should never happen, really
             return;
