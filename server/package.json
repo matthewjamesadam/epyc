@@ -23,7 +23,7 @@
         "aws-sdk": "^2.963.0",
         "cookie-parser": "^1.4.5",
         "cors": "^2.8.5",
-        "discord.js": "^12.5.3",
+        "discord.js": "^13.0.1",
         "express": "^4.17.1",
         "express-static-gzip": "^2.1.1",
         "fakelish": "^0.3.0",
