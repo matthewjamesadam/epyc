@@ -1,11 +1,11 @@
-import { deflate, inflate, Serializable, Serialize } from 'serialazy';
+import { deflate, inflate, JsonObject, Serializable, Serialize } from 'serialazy';
 import { SerializeDate, SerializeArray, SerializeRaw } from './Serialize';
 import { v4 as uuid } from 'uuid';
 import * as MongoDb from 'mongodb';
 import { Constructor } from 'serialazy/lib/dist/types';
 import * as API from './api';
 import Cfg from './Cfg';
-import { FilterQuery } from 'mongodb';
+import { Filter } from 'mongodb';
 
 export enum BotTarget {
     discord = 'discord',
@@ -286,7 +286,7 @@ export class Db implements IDb {
     }
 
     async getGames(query?: GameQuery): Promise<GameModel[]> {
-        const mongoQuery: MongoDb.FilterQuery<any> = {};
+        const mongoQuery: MongoDb.Filter<any> = {};
         if (query?.isComplete !== undefined && query?.isComplete !== null) {
             mongoQuery.isComplete = query?.isComplete;
         }
@@ -331,8 +331,17 @@ export class Db implements IDb {
         return inflate(GameModel, doc);
     }
 
+    private deflateDoc<T>(obj: T): JsonObject {
+        const doc = deflate(obj);
+        if (typeof doc !== 'object' || Array.isArray(doc) || !doc) {
+            throw new Error("Deflated object can't be saved in Mongo");
+        }
+
+        return doc;
+    }
+
     async putGame(game: GameModel): Promise<void> {
-        let doc = deflate(game);
+        let doc = this.deflateDoc(game);
         await this.game.replaceOne({ _id: game.name }, doc, { upsert: true });
         // return inflate(GameModel, doc);
     }
@@ -354,7 +363,7 @@ export class Db implements IDb {
     }
 
     async putPerson(person: PersonModel): Promise<void> {
-        const doc = deflate(person);
+        const doc = this.deflateDoc(person);
         await this.person.replaceOne({ _id: person.id }, doc, { upsert: true });
     }
 
@@ -398,7 +407,7 @@ export class Db implements IDb {
         slackToken.teamId = teamId;
         slackToken.installation = installation;
 
-        await this.slackToken.replaceOne({ _id: teamId }, deflate(slackToken), { upsert: true });
+        await this.slackToken.replaceOne({ _id: teamId }, this.deflateDoc(slackToken), { upsert: true });
     }
 
     private async resolveLinkedChannels(channel: ChannelModel): Promise<ChannelModel[]> {
@@ -460,7 +469,7 @@ export class Db implements IDb {
         }
 
         const interest = InterestModel.create(person.id, channel.id, channel.target);
-        const doc = deflate(interest);
+        const doc = this.deflateDoc(interest);
         await this.interest.replaceOne(filter, doc, { upsert: true });
     }
 }
