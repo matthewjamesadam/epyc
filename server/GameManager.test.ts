@@ -13,6 +13,8 @@ import {
 } from './Db';
 import { GameManager } from './GameManager';
 import Utils from './Utils';
+import fetch from 'node-fetch';
+const { Response } = jest.requireActual('node-fetch');
 
 // Mock ImageProcessor so we don't bring in Jimp, which fails in Jest tests :(
 // If unit tests ever actually
@@ -22,9 +24,18 @@ jest.mock('./ImageProcessor', () => {
     };
 });
 
+jest.mock('node-fetch', () => jest.fn());
+
 class MockBot implements IBot {
-    async sendMessage(channel: ChannelModel, ...content: MessageContent): Promise<void> {}
-    async sendDM(person: PersonModel, ...content: MessageContent): Promise<void> {}
+    messages = jest.fn<any, [ChannelModel, MessageContent]>();
+    dms = jest.fn<any, [PersonModel, MessageContent]>();
+
+    async sendMessage(channel: ChannelModel, ...content: MessageContent): Promise<void> {
+        this.messages(channel, content);
+    }
+    async sendDM(person: PersonModel, ...content: MessageContent): Promise<void> {
+        this.dms(person, content);
+    }
     async getAvatar(person: PersonModel): Promise<PersonAvatar | undefined> {
         return undefined;
     }
@@ -147,8 +158,10 @@ class MockDb implements IDb {
     }
 }
 
-const db = new MockDb();
-const mgr = new GameManager(db, new MockBot(), new MockBot());
+let db = new MockDb();
+let discordBot = new MockBot();
+let slackBot = new MockBot();
+let mgr = new GameManager(db, discordBot, slackBot);
 
 function verifyPersonRoles(game: GameModel | undefined, db: MockDb) {
     expect(game).toBeDefined();
@@ -168,6 +181,13 @@ function verifyPersonRoles(game: GameModel | undefined, db: MockDb) {
 }
 
 beforeEach(() => {
+    jest.clearAllMocks();
+
+    db = new MockDb();
+    discordBot = new MockBot();
+    slackBot = new MockBot();
+    mgr = new GameManager(db, discordBot, slackBot);
+
     db.populate();
 });
 
@@ -247,6 +267,55 @@ describe('GameManager.leaveGame', () => {
         expect(game).toBeDefined();
         expect(game?.frames.length).toEqual(12);
         expect(game?.frames[0].personId).toEqual(secondPerson);
+    });
+
+    test('notifies next player', async () => {
+        let game = db.games.get('game1');
+        expect(game?.frames.length).toEqual(13);
+
+        await mgr.leaveGame(defaultChannel, defaultPeopleRefs[0], 'game1');
+
+        game = db.games.get('game1');
+
+        expect(slackBot.messages.mock.calls.length).toBe(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain("'s turn for game ");
+
+        expect(slackBot.dms.mock.calls.length).toBe(1);
+        expect(slackBot.dms.mock.calls[0][1]).toContain("It's your turn to play Eat Poop You Cat on game ");
+    });
+
+    test("doesn't notify when a future player leaves", async () => {
+        let game = db.games.get('game1');
+        expect(game?.frames.length).toEqual(13);
+
+        await mgr.leaveGame(defaultChannel, defaultPeopleRefs[1], 'game1');
+
+        game = db.games.get('game1');
+
+        expect(slackBot.messages.mock.calls.length).toBe(0);
+        expect(slackBot.dms.mock.calls.length).toBe(0);
+    });
+
+    test('cleans up game when last player leaves', async () => {
+        // Mock out fetch so the game title image fetching doesn't fail
+        (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(new Response(undefined));
+
+        const frames = defaultPeople.slice(0, 4).map((person) => FrameModel.create(person.id));
+        frames[0].title = 'abc';
+        frames[1].image = FrameImageModel.create('abc', 'def', 5, 5);
+        frames[2].title = 'def';
+
+        db.games.set('game1', GameModel.create('game1', defaultChannel, frames));
+
+        await mgr.leaveGame(defaultChannel, defaultPeopleRefs[3], 'game1');
+
+        let game = db.games.get('game1');
+
+        expect(game?.isComplete).toBe(true);
+        expect(game?.frames.length).toBe(3);
+
+        expect(slackBot.messages.mock.calls.length).toBe(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain(' is done!  ');
     });
 
     test('fulfills game role constraints', async () => {

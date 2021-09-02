@@ -304,6 +304,9 @@ export class GameManager {
 
             await this.db.putPerson(person);
             await cleanup();
+        } catch (err) {
+            // Log errors but otherwise eat them -- failing to update an avatar is fine
+            Logger.log(err);
         } finally {
             await this.unlink(path);
         }
@@ -347,7 +350,7 @@ export class GameManager {
         // Pick a random image
         const imageFrames = game.frames.map((frame) => frame.image).filter(ArrayUtils.notNull);
 
-        if (imageFrames.length < 0) {
+        if (imageFrames.length <= 0) {
             return;
         }
 
@@ -389,7 +392,7 @@ export class GameManager {
 
             await this.createGameTitleImage(game);
             await this.db.putGame(game);
-            await this.sendMessage(game.channel, `Game `, Bold(game.name), ` is done!  ${this.getGameUrl(game)}`);
+            await this.sendMessage(game.channel, `Game `, Bold(game.name), ` is done!  `, this.getGameUrl(game));
         }
 
         // Game's not over yet -- tell the next player
@@ -577,10 +580,7 @@ export class GameManager {
     }
 
     async leaveGame(channel: ChannelModel, personRef: PersonRef, gameName: string): Promise<void> {
-        const [game, person] = await Promise.all([
-            this.db.getGame(gameName),
-            this.db.getPersonFromService(personRef.id, personRef.target),
-        ]);
+        const [game, person] = await Promise.all([this.db.getGame(gameName), this.resolvePerson(personRef)]);
 
         if (!game) {
             throw new GameLogicError('Game ', Bold(gameName), ' does not exist');
@@ -600,11 +600,12 @@ export class GameManager {
             throw new GameLogicError(`You've already played your turn on game `, Bold(gameName));
         }
 
+        const incompleteFrameIdx = game.frames.findIndex((frame) => !frame.isComplete);
+
         await this.dropFrame(game, frameIdx);
         await this.db.putGame(game);
 
         // If we just skipped the current frame, tell the next person
-        const incompleteFrameIdx = game.frames.findIndex((frame) => !frame.isComplete);
         if (incompleteFrameIdx === frameIdx) {
             await this.onFrameDone(game, frameIdx - 1);
         }
