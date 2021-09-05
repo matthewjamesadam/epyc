@@ -130,6 +130,21 @@ class MockDb implements IDb {
         this.games.clear();
         const frames = Array.from(this.persons.values()).map((person) => FrameModel.create(person.id));
         db.games.set('game1', GameModel.create('game1', defaultChannel, frames));
+
+        // Add completed game
+        const game2Frames = [
+            FrameModel.create(defaultPeople[0].id),
+            FrameModel.create(defaultPeople[1].id),
+            FrameModel.create(defaultPeople[2].id),
+            FrameModel.create(defaultPeople[3].id),
+        ];
+        game2Frames[0].title = 'title';
+        game2Frames[1].image = FrameImageModel.create('imageurl', 'imagefile', 1, 1);
+        game2Frames[2].title = 'title';
+        game2Frames[3].image = FrameImageModel.create('imageurl', 'imagefile', 1, 1);
+        const game2 = GameModel.create('game2', defaultChannel, game2Frames);
+        game2.isComplete = true;
+        db.games.set('game2', game2);
     }
 
     makeFrame(personId: string, isComplete: boolean) {
@@ -232,6 +247,56 @@ describe('GameManager.startGame', () => {
 });
 
 describe('GameManager.joinGame', () => {
+    test('works', async () => {
+        const newPersonRef: PersonRef = {
+            id: 'newPerson',
+            target: BotTarget.slack,
+            name: 'New Person',
+        };
+
+        let game = await db.getGame('game1');
+        expect(game?.frames.length).toEqual(13);
+
+        await mgr.joinGame(defaultChannel, newPersonRef, 'game1');
+        game = await db.getGame('game1');
+
+        const newPerson = await db.getPersonFromService(newPersonRef.id, newPersonRef.target);
+
+        expect(newPerson).toBeDefined();
+        expect(game?.frames.length).toEqual(14);
+        expect(game?.frames.some((frame) => frame.personId === newPerson?.id));
+
+        // Verify notification is sent to channel
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain(', you are now in game ');
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        await expect(mgr.joinGame(defaultChannel, artistPersonRef, 'game1bbb')).rejects.toThrowError(' does not exist');
+    });
+
+    test('rejects when player is already in the game', async () => {
+        await expect(mgr.joinGame(defaultChannel, artistPersonRef, 'game1')).rejects.toThrowError(
+            'You are already in game'
+        );
+    });
+
+    test('rejects when game is already completed', async () => {
+        await expect(mgr.joinGame(defaultChannel, artistPersonRef, 'game2')).rejects.toThrowError(
+            'is already complete'
+        );
+    });
+
+    test('works', async () => {
+        const newPersonRef: PersonRef = {
+            id: 'newPerson',
+            target: BotTarget.slack,
+            name: 'New Person',
+        };
+
+        await mgr.joinGame(defaultChannel, newPersonRef, 'game1');
+    });
+
     test('fulfills game role constraints', async () => {
         // Because role constraints are resolved by swapping to a random location, run this a bunch of times, with differing
         // lengths of completed game.
@@ -368,5 +433,26 @@ describe('GameManager.leaveGame', () => {
             expect(game?.frames.length).toEqual(5);
             verifyPersonRoles(game, db);
         }
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        await expect(mgr.leaveGame(defaultChannel, artistPersonRef, 'game1bbb')).rejects.toThrowError(
+            ' does not exist'
+        );
+    });
+
+    test('rejects when player is not in the game', async () => {
+        const randomPerson: PersonRef = {
+            id: 'abc123random',
+            name: 'somethingrandom',
+            target: BotTarget.slack,
+        };
+        await expect(mgr.leaveGame(defaultChannel, randomPerson, 'game1')).rejects.toThrowError('You are not in game');
+    });
+
+    test('rejects when game is already completed', async () => {
+        await expect(mgr.leaveGame(defaultChannel, defaultPeopleRefs[0], 'game2')).rejects.toThrowError(
+            'is already complete'
+        );
     });
 });
