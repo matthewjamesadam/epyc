@@ -15,16 +15,23 @@ import { GameManager } from './GameManager';
 import Utils from './Utils';
 import fetch from 'node-fetch';
 const { Response } = jest.requireActual('node-fetch');
+const fetchActual = jest.requireActual('node-fetch');
 
 // Mock ImageProcessor so we don't bring in Jimp, which fails in Jest tests :(
 // If unit tests ever actually
-jest.mock('./ImageProcessor', () => {
-    return function () {
-        return {};
-    };
-});
+// jest.mock('./ImageProcessor', () => {
+//     return function () {
+//         return {};
+//     };
+// });
 
-jest.mock('node-fetch', () => jest.fn());
+const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+jest.mock('node-fetch', () =>
+    jest.fn(() => {
+        return fetchActual();
+    })
+);
 
 class MockBot implements IBot {
     messages = jest.fn<any, [ChannelModel, string]>();
@@ -388,7 +395,7 @@ describe('GameManager.leaveGame', () => {
 
     test('cleans up game when last player leaves', async () => {
         // Mock out fetch so the game title image fetching doesn't fail
-        (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(new Response(undefined));
+        mockFetch.mockResolvedValueOnce(new Response(undefined));
 
         const frames = defaultPeople.slice(0, 4).map((person) => FrameModel.create(person.id));
         frames[0].title = 'abc';
