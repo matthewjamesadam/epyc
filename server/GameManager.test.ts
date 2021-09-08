@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid';
-import { IBot, MessageContent, PersonAvatar, PersonRef } from './Bot';
+import { Bot, IBot, MessageContent, PersonAvatar, PersonRef } from './Bot';
 import {
     BotTarget,
     ChannelModel,
@@ -27,17 +27,28 @@ jest.mock('./ImageProcessor', () => {
 jest.mock('node-fetch', () => jest.fn());
 
 class MockBot implements IBot {
-    messages = jest.fn<any, [ChannelModel, MessageContent]>();
-    dms = jest.fn<any, [PersonModel, MessageContent]>();
+    messages = jest.fn<any, [ChannelModel, string]>();
+    dms = jest.fn<any, [PersonModel, string]>();
 
     async sendMessage(channel: ChannelModel, ...content: MessageContent): Promise<void> {
-        this.messages(channel, content);
+        this.messages(channel, this.msgToString(content));
     }
     async sendDM(person: PersonModel, ...content: MessageContent): Promise<void> {
-        this.dms(person, content);
+        this.dms(person, this.msgToString(content));
     }
     async getAvatar(person: PersonModel): Promise<PersonAvatar | undefined> {
         return undefined;
+    }
+
+    private msgToString(msg: MessageContent): string {
+        return msg
+            .map((chunk) => {
+                if (typeof chunk === 'string') {
+                    return chunk;
+                }
+                return chunk.message;
+            })
+            .join('');
     }
 }
 
@@ -62,6 +73,9 @@ authorPerson.preferredGameRole = PersonFrameRole.author;
 const authorPersonRef: PersonRef = { id: authorPerson.serviceId, name: '', target: authorPerson.target };
 
 const defaultChannel = ChannelModel.create('channel1', 'channel1', BotTarget.slack);
+
+const discordPersonRef: PersonRef = { id: 'discordPerson', name: 'Discord Person', target: BotTarget.discord };
+const discordPerson = PersonModel.create(discordPersonRef.id, discordPersonRef.name, discordPersonRef.target);
 
 class MockDb implements IDb {
     games = new Map<string, GameModel>();
@@ -107,10 +121,17 @@ class MockDb implements IDb {
     }
 
     async putInterest(person: PersonModel, channel: ChannelModel, isInterested: boolean): Promise<void> {
+        this.interests = this.interests.filter((interest) => {
+            return (
+                interest.channelId !== channel.id ||
+                interest.target !== channel.target ||
+                interest.personId !== person.id
+            );
+        });
+
         if (isInterested) {
             this.interests.push({ channelId: channel.id, target: channel.target, personId: person.id });
         }
-        // FIXME: remove dupes, implement removal
     }
 
     populate() {
@@ -122,10 +143,14 @@ class MockDb implements IDb {
         this.persons.set(artistPerson.id, artistPerson);
         this.persons.set(authorPerson.id, authorPerson);
 
-        this.persons.set('discordPerson', PersonModel.create('discordPerson', '', BotTarget.discord));
+        this.persons.set(discordPerson.id, discordPerson);
 
         this.interests.splice(0, this.interests.length);
-        this.interests.push({ personId: 'discordPerson', channelId: 'channel1', target: BotTarget.slack });
+        this.interests.push({
+            personId: discordPerson.id,
+            channelId: defaultChannel.id,
+            target: defaultChannel.target,
+        });
 
         this.games.clear();
         const frames = Array.from(this.persons.values()).map((person) => FrameModel.create(person.id));
@@ -453,6 +478,36 @@ describe('GameManager.leaveGame', () => {
     test('rejects when game is already completed', async () => {
         await expect(mgr.leaveGame(defaultChannel, defaultPeopleRefs[0], 'game2')).rejects.toThrowError(
             'is already complete'
+        );
+    });
+});
+
+describe('GameManager.setAvailable', () => {
+    test('works when setting availability', async () => {
+        expect(db.interests.length).toEqual(1);
+        await mgr.setAvailable(defaultChannel, artistPersonRef, true);
+        expect(db.interests.length).toEqual(2);
+        expect(
+            db.interests.some(
+                (interest) =>
+                    interest.personId === artistPerson.id &&
+                    interest.channelId === defaultChannel.id &&
+                    interest.target === defaultChannel.target
+            )
+        ).toBeTruthy();
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain(', you are now available for new games in this channel.');
+    });
+
+    test('works when removing availability', async () => {
+        expect(db.interests.length).toEqual(1);
+        await mgr.setAvailable(defaultChannel, discordPersonRef, false);
+        expect(db.interests.length).toEqual(0);
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain(
+            ', you are no longer available for new games in this channel.'
         );
     });
 });
