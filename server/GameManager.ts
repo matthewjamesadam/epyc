@@ -306,7 +306,7 @@ export class GameManager {
             await cleanup();
         } catch (err) {
             // Log errors but otherwise eat them -- failing to update an avatar is fine
-            Logger.log(err);
+            Logger.exception(err, 'Error occurred while updating avatar');
         } finally {
             await this.unlink(path);
         }
