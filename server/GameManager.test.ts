@@ -1,4 +1,5 @@
 import { v4 as uuid } from 'uuid';
+import fs from 'fs';
 import { Bot, IBot, MessageContent, PersonAvatar, PersonRef } from './Bot';
 import {
     BotTarget,
@@ -16,6 +17,8 @@ import Utils from './Utils';
 import fetch from 'node-fetch';
 const { Response } = jest.requireActual('node-fetch');
 const fetchActual = jest.requireActual('node-fetch');
+import { Readable } from 'stream';
+import { integer } from 'aws-sdk/clients/cloudfront';
 
 // Mock ImageProcessor so we don't bring in Jimp, which fails in Jest tests :(
 // If unit tests ever actually
@@ -24,6 +27,19 @@ const fetchActual = jest.requireActual('node-fetch');
 //         return {};
 //     };
 // });
+
+jest.mock('./ImageStore', () => ({
+    uploadImage: async (
+        gameName: string,
+        frameId: string,
+        data: Readable
+    ): Promise<{ fileName: string; fileUrl: string }> => {
+        return {
+            fileName: 'fakeFileName',
+            fileUrl: 'fakeFileUrl',
+        };
+    },
+}));
 
 const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
 
@@ -61,7 +77,7 @@ class MockBot implements IBot {
 
 const defaultPeopleRefs: PersonRef[] = Array.from({ length: 10 }, (z, idx) => ({
     id: `person${idx}`,
-    name: '',
+    name: `Person ${idx}`,
     target: BotTarget.slack,
 }));
 
@@ -515,6 +531,111 @@ describe('GameManager.setAvailable', () => {
         expect(slackBot.messages.mock.calls.length).toEqual(1);
         expect(slackBot.messages.mock.calls[0][1]).toContain(
             ', you are no longer available for new games in this channel.'
+        );
+    });
+});
+
+const createInProgressGame = async (numFrames: number): Promise<GameModel> => {
+    const frames = defaultPeople.slice(0, Math.max(numFrames, 4)).map((person) => FrameModel.create(person.id));
+    if (numFrames > 0) {
+        frames[0].title = 'abc';
+    }
+    if (numFrames > 1) {
+        frames[1].image = FrameImageModel.create('abc', 'def', 5, 5);
+    }
+    if (numFrames > 2) {
+        frames[2].title = 'def';
+    }
+    if (numFrames > 3) {
+        frames[3].image = FrameImageModel.create('ghi', 'jkl', 15, 15);
+    }
+
+    const game = GameModel.create('game1', defaultChannel, frames);
+    db.games.set('game1', game);
+
+    return game;
+};
+
+describe('GameManager.playImageTurn', () => {
+    test('works', async () => {
+        const newGame = await createInProgressGame(1);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await mgr.playImageTurn(newGame.name, newGame.frames[1].id || '', frameStream);
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(false);
+        expect(game?.frames[1].isComplete).toEqual(true);
+        expect(game?.frames[1].image?.width).toEqual(325);
+        expect(game?.frames[1].image?.height).toEqual(250);
+        expect(game?.frames[1].image?.imageFileName).toEqual('fakeFileName');
+        expect(game?.frames[1].image?.imageUrl).toEqual('fakeFileUrl');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain("It is now Person 2's turn for game game1");
+        expect(slackBot.dms.mock.calls.length).toEqual(1);
+        expect(slackBot.dms.mock.calls[0][1]).toContain("It's your turn to play Eat Poop You Cat on game game1");
+    });
+
+    test('cleans up game when last frame played', async () => {
+        // Mock out fetch so the game title image fetching doesn't fail
+        mockFetch.mockResolvedValueOnce(new Response(undefined));
+
+        const newGame = await createInProgressGame(3);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await mgr.playImageTurn(newGame.name, newGame.frames[3].id || '', frameStream);
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(true);
+        expect(game?.frames[3].isComplete).toEqual(true);
+        expect(game?.frames[3].image?.width).toEqual(325);
+        expect(game?.frames[3].image?.height).toEqual(250);
+        expect(game?.frames[3].image?.imageFileName).toEqual('fakeFileName');
+        expect(game?.frames[3].image?.imageUrl).toEqual('fakeFileUrl');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain('Game game1 is done!');
+        expect(slackBot.dms.mock.calls.length).toEqual(0);
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn('InvalidGameID', 'InvalidTurnID', frameStream)).rejects.toThrowError(
+            "Game doesn't exist"
+        );
+    });
+
+    test("rejects when turn doesn't exist", async () => {
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn('game1', 'InvalidTurnID', frameStream)).rejects.toThrowError(
+            "Frame doesn't exist"
+        );
+    });
+
+    test('rejects when previous turn was an image turn', async () => {
+        const newGame = await createInProgressGame(2);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn(newGame.name, newGame.frames[2].id, frameStream)).rejects.toThrowError(
+            'Previous turn state is inconsistent'
+        );
+    });
+
+    test('rejects when turn is completed', async () => {
+        const newGame = await createInProgressGame(3);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn(newGame.name, newGame.frames[1].id, frameStream)).rejects.toThrowError(
+            'Turn is already complete'
         );
     });
 });
