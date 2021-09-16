@@ -388,6 +388,9 @@ export class GameManager {
             );
 
             cleanup();
+        } catch (err) {
+            // Log errors but otherwise eat them -- failing to create title image is fine
+            Logger.exception(err, 'Error occurred while creating title image');
         } finally {
             this.unlink(path);
         }

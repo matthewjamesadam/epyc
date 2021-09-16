@@ -705,3 +705,23 @@ describe('GameManager.playTitleTurn', () => {
         );
     });
 });
+
+describe('GameManager.onFrameDone', () => {
+    test('still succeeds when title image generation fails', async () => {
+        // Mock out fetch so generating title image always fails
+        mockFetch.mockRejectedValueOnce(new Error('Failure!'));
+
+        // Mock stderr so we verify it's logged and doesn't pollute test output
+        let stderrMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        const newGame = await createInProgressGame(2, 3);
+        await mgr.playTitleTurn(newGame.name, newGame.frames[2].id || '', 'New title');
+
+        const game = await db.getGame(newGame.name);
+        expect(game?.isComplete).toEqual(true);
+
+        expect(stderrMock).toHaveBeenCalled();
+        expect(stderrMock.mock.calls[0][0]).toContain('Error occurred while creating title image');
+        stderrMock.mockRestore();
+    });
+});
