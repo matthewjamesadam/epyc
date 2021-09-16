@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
-import { IBot, MessageContent, PersonAvatar, PersonRef } from './Bot';
+import fs from 'fs';
+import { Bot, IBot, MessageContent, PersonAvatar, PersonRef } from './Bot';
 import {
     BotTarget,
     ChannelModel,
@@ -15,35 +16,68 @@ import { GameManager } from './GameManager';
 import Utils from './Utils';
 import fetch from 'node-fetch';
 const { Response } = jest.requireActual('node-fetch');
+const fetchActual = jest.requireActual('node-fetch');
+import { Readable } from 'stream';
+import { integer } from 'aws-sdk/clients/cloudfront';
 
 // Mock ImageProcessor so we don't bring in Jimp, which fails in Jest tests :(
 // If unit tests ever actually
-jest.mock('./ImageProcessor', () => {
-    return function () {
-        return {};
-    };
-});
+// jest.mock('./ImageProcessor', () => {
+//     return function () {
+//         return {};
+//     };
+// });
 
-jest.mock('node-fetch', () => jest.fn());
+jest.mock('./ImageStore', () => ({
+    uploadImage: async (
+        gameName: string,
+        frameId: string,
+        data: Readable
+    ): Promise<{ fileName: string; fileUrl: string }> => {
+        return {
+            fileName: 'fakeFileName',
+            fileUrl: 'fakeFileUrl',
+        };
+    },
+}));
+
+const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+
+jest.mock('node-fetch', () =>
+    jest.fn(() => {
+        return fetchActual();
+    })
+);
 
 class MockBot implements IBot {
-    messages = jest.fn<any, [ChannelModel, MessageContent]>();
-    dms = jest.fn<any, [PersonModel, MessageContent]>();
+    messages = jest.fn<any, [ChannelModel, string]>();
+    dms = jest.fn<any, [PersonModel, string]>();
 
     async sendMessage(channel: ChannelModel, ...content: MessageContent): Promise<void> {
-        this.messages(channel, content);
+        this.messages(channel, this.msgToString(content));
     }
     async sendDM(person: PersonModel, ...content: MessageContent): Promise<void> {
-        this.dms(person, content);
+        this.dms(person, this.msgToString(content));
     }
     async getAvatar(person: PersonModel): Promise<PersonAvatar | undefined> {
         return undefined;
+    }
+
+    private msgToString(msg: MessageContent): string {
+        return msg
+            .map((chunk) => {
+                if (typeof chunk === 'string') {
+                    return chunk;
+                }
+                return chunk.message;
+            })
+            .join('');
     }
 }
 
 const defaultPeopleRefs: PersonRef[] = Array.from({ length: 10 }, (z, idx) => ({
     id: `person${idx}`,
-    name: '',
+    name: `Person ${idx}`,
     target: BotTarget.slack,
 }));
 
@@ -62,6 +96,9 @@ authorPerson.preferredGameRole = PersonFrameRole.author;
 const authorPersonRef: PersonRef = { id: authorPerson.serviceId, name: '', target: authorPerson.target };
 
 const defaultChannel = ChannelModel.create('channel1', 'channel1', BotTarget.slack);
+
+const discordPersonRef: PersonRef = { id: 'discordPerson', name: 'Discord Person', target: BotTarget.discord };
+const discordPerson = PersonModel.create(discordPersonRef.id, discordPersonRef.name, discordPersonRef.target);
 
 class MockDb implements IDb {
     games = new Map<string, GameModel>();
@@ -107,10 +144,17 @@ class MockDb implements IDb {
     }
 
     async putInterest(person: PersonModel, channel: ChannelModel, isInterested: boolean): Promise<void> {
+        this.interests = this.interests.filter((interest) => {
+            return (
+                interest.channelId !== channel.id ||
+                interest.target !== channel.target ||
+                interest.personId !== person.id
+            );
+        });
+
         if (isInterested) {
             this.interests.push({ channelId: channel.id, target: channel.target, personId: person.id });
         }
-        // FIXME: remove dupes, implement removal
     }
 
     populate() {
@@ -122,14 +166,33 @@ class MockDb implements IDb {
         this.persons.set(artistPerson.id, artistPerson);
         this.persons.set(authorPerson.id, authorPerson);
 
-        this.persons.set('discordPerson', PersonModel.create('discordPerson', '', BotTarget.discord));
+        this.persons.set(discordPerson.id, discordPerson);
 
         this.interests.splice(0, this.interests.length);
-        this.interests.push({ personId: 'discordPerson', channelId: 'channel1', target: BotTarget.slack });
+        this.interests.push({
+            personId: discordPerson.id,
+            channelId: defaultChannel.id,
+            target: defaultChannel.target,
+        });
 
         this.games.clear();
         const frames = Array.from(this.persons.values()).map((person) => FrameModel.create(person.id));
         db.games.set('game1', GameModel.create('game1', defaultChannel, frames));
+
+        // Add completed game
+        const game2Frames = [
+            FrameModel.create(defaultPeople[0].id),
+            FrameModel.create(defaultPeople[1].id),
+            FrameModel.create(defaultPeople[2].id),
+            FrameModel.create(defaultPeople[3].id),
+        ];
+        game2Frames[0].title = 'title';
+        game2Frames[1].image = FrameImageModel.create('imageurl', 'imagefile', 1, 1);
+        game2Frames[2].title = 'title';
+        game2Frames[3].image = FrameImageModel.create('imageurl', 'imagefile', 1, 1);
+        const game2 = GameModel.create('game2', defaultChannel, game2Frames);
+        game2.isComplete = true;
+        db.games.set('game2', game2);
     }
 
     makeFrame(personId: string, isComplete: boolean) {
@@ -232,6 +295,56 @@ describe('GameManager.startGame', () => {
 });
 
 describe('GameManager.joinGame', () => {
+    test('works', async () => {
+        const newPersonRef: PersonRef = {
+            id: 'newPerson',
+            target: BotTarget.slack,
+            name: 'New Person',
+        };
+
+        let game = await db.getGame('game1');
+        expect(game?.frames.length).toEqual(13);
+
+        await mgr.joinGame(defaultChannel, newPersonRef, 'game1');
+        game = await db.getGame('game1');
+
+        const newPerson = await db.getPersonFromService(newPersonRef.id, newPersonRef.target);
+
+        expect(newPerson).toBeDefined();
+        expect(game?.frames.length).toEqual(14);
+        expect(game?.frames.some((frame) => frame.personId === newPerson?.id));
+
+        // Verify notification is sent to channel
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain(', you are now in game ');
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        await expect(mgr.joinGame(defaultChannel, artistPersonRef, 'game1bbb')).rejects.toThrowError(' does not exist');
+    });
+
+    test('rejects when player is already in the game', async () => {
+        await expect(mgr.joinGame(defaultChannel, artistPersonRef, 'game1')).rejects.toThrowError(
+            'You are already in game'
+        );
+    });
+
+    test('rejects when game is already completed', async () => {
+        await expect(mgr.joinGame(defaultChannel, artistPersonRef, 'game2')).rejects.toThrowError(
+            'is already complete'
+        );
+    });
+
+    test('works', async () => {
+        const newPersonRef: PersonRef = {
+            id: 'newPerson',
+            target: BotTarget.slack,
+            name: 'New Person',
+        };
+
+        await mgr.joinGame(defaultChannel, newPersonRef, 'game1');
+    });
+
     test('fulfills game role constraints', async () => {
         // Because role constraints are resolved by swapping to a random location, run this a bunch of times, with differing
         // lengths of completed game.
@@ -298,7 +411,7 @@ describe('GameManager.leaveGame', () => {
 
     test('cleans up game when last player leaves', async () => {
         // Mock out fetch so the game title image fetching doesn't fail
-        (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce(new Response(undefined));
+        mockFetch.mockResolvedValueOnce(new Response(undefined));
 
         const frames = defaultPeople.slice(0, 4).map((person) => FrameModel.create(person.id));
         frames[0].title = 'abc';
@@ -368,5 +481,227 @@ describe('GameManager.leaveGame', () => {
             expect(game?.frames.length).toEqual(5);
             verifyPersonRoles(game, db);
         }
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        await expect(mgr.leaveGame(defaultChannel, artistPersonRef, 'game1bbb')).rejects.toThrowError(
+            ' does not exist'
+        );
+    });
+
+    test('rejects when player is not in the game', async () => {
+        const randomPerson: PersonRef = {
+            id: 'abc123random',
+            name: 'somethingrandom',
+            target: BotTarget.slack,
+        };
+        await expect(mgr.leaveGame(defaultChannel, randomPerson, 'game1')).rejects.toThrowError('You are not in game');
+    });
+
+    test('rejects when game is already completed', async () => {
+        await expect(mgr.leaveGame(defaultChannel, defaultPeopleRefs[0], 'game2')).rejects.toThrowError(
+            'is already complete'
+        );
+    });
+});
+
+describe('GameManager.setAvailable', () => {
+    test('works when setting availability', async () => {
+        expect(db.interests.length).toEqual(1);
+        await mgr.setAvailable(defaultChannel, artistPersonRef, true);
+        expect(db.interests.length).toEqual(2);
+        expect(
+            db.interests.some(
+                (interest) =>
+                    interest.personId === artistPerson.id &&
+                    interest.channelId === defaultChannel.id &&
+                    interest.target === defaultChannel.target
+            )
+        ).toBeTruthy();
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain(', you are now available for new games in this channel.');
+    });
+
+    test('works when removing availability', async () => {
+        expect(db.interests.length).toEqual(1);
+        await mgr.setAvailable(defaultChannel, discordPersonRef, false);
+        expect(db.interests.length).toEqual(0);
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain(
+            ', you are no longer available for new games in this channel.'
+        );
+    });
+});
+
+const createInProgressGame = async (numFrames: number, maxFrames: number = 4): Promise<GameModel> => {
+    const frames = defaultPeople
+        .slice(0, Math.max(numFrames, Math.min(maxFrames, 4)))
+        .map((person) => FrameModel.create(person.id));
+    if (numFrames > 0) {
+        frames[0].title = 'abc';
+    }
+    if (numFrames > 1) {
+        frames[1].image = FrameImageModel.create('abc', 'def', 5, 5);
+    }
+    if (numFrames > 2) {
+        frames[2].title = 'def';
+    }
+    if (numFrames > 3) {
+        frames[3].image = FrameImageModel.create('ghi', 'jkl', 15, 15);
+    }
+
+    const game = GameModel.create('game1', defaultChannel, frames);
+    db.games.set('game1', game);
+
+    return game;
+};
+
+describe('GameManager.playImageTurn', () => {
+    test('works', async () => {
+        const newGame = await createInProgressGame(1);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await mgr.playImageTurn(newGame.name, newGame.frames[1].id || '', frameStream);
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(false);
+        expect(game?.frames[1].isComplete).toEqual(true);
+        expect(game?.frames[1].image?.width).toEqual(325);
+        expect(game?.frames[1].image?.height).toEqual(250);
+        expect(game?.frames[1].image?.imageFileName).toEqual('fakeFileName');
+        expect(game?.frames[1].image?.imageUrl).toEqual('fakeFileUrl');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain("It is now Person 2's turn for game game1");
+        expect(slackBot.dms.mock.calls.length).toEqual(1);
+        expect(slackBot.dms.mock.calls[0][1]).toContain("It's your turn to play Eat Poop You Cat on game game1");
+    });
+
+    test('cleans up game when last frame played', async () => {
+        // Mock out fetch so the game title image fetching doesn't fail
+        mockFetch.mockResolvedValueOnce(new Response(undefined));
+
+        const newGame = await createInProgressGame(3);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await mgr.playImageTurn(newGame.name, newGame.frames[3].id || '', frameStream);
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(true);
+        expect(game?.frames[3].isComplete).toEqual(true);
+        expect(game?.frames[3].image?.width).toEqual(325);
+        expect(game?.frames[3].image?.height).toEqual(250);
+        expect(game?.frames[3].image?.imageFileName).toEqual('fakeFileName');
+        expect(game?.frames[3].image?.imageUrl).toEqual('fakeFileUrl');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain('Game game1 is done!');
+        expect(slackBot.dms.mock.calls.length).toEqual(0);
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn('InvalidGameID', 'InvalidTurnID', frameStream)).rejects.toThrowError(
+            "Game doesn't exist"
+        );
+    });
+
+    test("rejects when turn doesn't exist", async () => {
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn('game1', 'InvalidTurnID', frameStream)).rejects.toThrowError(
+            "Frame doesn't exist"
+        );
+    });
+
+    test('rejects when previous turn was an image turn', async () => {
+        const newGame = await createInProgressGame(2);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn(newGame.name, newGame.frames[2].id, frameStream)).rejects.toThrowError(
+            'Previous turn state is inconsistent'
+        );
+    });
+
+    test('rejects when turn is completed', async () => {
+        const newGame = await createInProgressGame(3);
+
+        const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
+
+        await expect(mgr.playImageTurn(newGame.name, newGame.frames[1].id, frameStream)).rejects.toThrowError(
+            'Turn is already complete'
+        );
+    });
+});
+
+describe('GameManager.playTitleTurn', () => {
+    test('works', async () => {
+        const newGame = await createInProgressGame(0);
+
+        await mgr.playTitleTurn(newGame.name, newGame.frames[0].id || '', 'New title');
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(false);
+        expect(game?.frames[0].isComplete).toEqual(true);
+        expect(game?.frames[0].title).toEqual('New title');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain("It is now Person 1's turn for game game1");
+        expect(slackBot.dms.mock.calls.length).toEqual(1);
+        expect(slackBot.dms.mock.calls[0][1]).toContain("It's your turn to play Eat Poop You Cat on game game1");
+    });
+
+    test('cleans up game when last frame played', async () => {
+        // Mock out fetch so the game title image fetching doesn't fail
+        mockFetch.mockResolvedValueOnce(new Response(undefined));
+
+        const newGame = await createInProgressGame(2, 3);
+
+        await mgr.playTitleTurn(newGame.name, newGame.frames[2].id || '', 'New title');
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(true);
+        expect(game?.frames[2].isComplete).toEqual(true);
+        expect(game?.frames[2].title).toEqual('New title');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain('Game game1 is done!');
+        expect(slackBot.dms.mock.calls.length).toEqual(0);
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        await expect(mgr.playTitleTurn('InvalidGameID', 'InvalidTurnID', 'abc')).rejects.toThrowError(
+            "Game doesn't exist"
+        );
+    });
+
+    test("rejects when turn doesn't exist", async () => {
+        await expect(mgr.playTitleTurn('game1', 'InvalidTurnID', 'abc')).rejects.toThrowError("Frame doesn't exist");
+    });
+
+    test('rejects when previous turn was a title turn', async () => {
+        const newGame = await createInProgressGame(3);
+
+        await expect(mgr.playTitleTurn(newGame.name, newGame.frames[3].id, 'abc')).rejects.toThrowError(
+            'Previous turn state is inconsistent'
+        );
+    });
+
+    test('rejects when turn is completed', async () => {
+        const newGame = await createInProgressGame(2);
+
+        await expect(mgr.playTitleTurn(newGame.name, newGame.frames[0].id, 'abc')).rejects.toThrowError(
+            'Turn is already complete'
+        );
     });
 });

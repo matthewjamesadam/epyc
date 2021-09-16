@@ -218,6 +218,10 @@ export class GameManager {
         const { game, frameIdx, frame, parentFrame } = await this.getFrameData(gameName, frameId);
         const person = await this.db.getPerson(frame.personId);
 
+        if (frame.isComplete) {
+            throw new Error('Turn is already complete');
+        }
+
         if (parentFrame?.title || (parentFrame && !parentFrame.image)) {
             throw new Error('Previous turn state is inconsistent');
         }
@@ -306,7 +310,7 @@ export class GameManager {
             await cleanup();
         } catch (err) {
             // Log errors but otherwise eat them -- failing to update an avatar is fine
-            Logger.log(err);
+            Logger.exception(err, 'Error occurred while updating avatar');
         } finally {
             await this.unlink(path);
         }
@@ -315,6 +319,10 @@ export class GameManager {
     async playImageTurn(gameName: string, frameId: string, blob: Readable) {
         const { game, frameIdx, frame, parentFrame } = await this.getFrameData(gameName, frameId);
         const person = await this.db.getPerson(frame.personId);
+
+        if (frame.isComplete) {
+            throw new Error('Turn is already complete');
+        }
 
         if (parentFrame?.image || (parentFrame && !parentFrame.title)) {
             throw new Error('Previous turn state is inconsistent');
