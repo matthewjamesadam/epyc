@@ -535,8 +535,10 @@ describe('GameManager.setAvailable', () => {
     });
 });
 
-const createInProgressGame = async (numFrames: number): Promise<GameModel> => {
-    const frames = defaultPeople.slice(0, Math.max(numFrames, 4)).map((person) => FrameModel.create(person.id));
+const createInProgressGame = async (numFrames: number, maxFrames: number = 4): Promise<GameModel> => {
+    const frames = defaultPeople
+        .slice(0, Math.max(numFrames, Math.min(maxFrames, 4)))
+        .map((person) => FrameModel.create(person.id));
     if (numFrames > 0) {
         frames[0].title = 'abc';
     }
@@ -635,6 +637,70 @@ describe('GameManager.playImageTurn', () => {
         const frameStream = fs.createReadStream('../client/epyc-sample-1.png');
 
         await expect(mgr.playImageTurn(newGame.name, newGame.frames[1].id, frameStream)).rejects.toThrowError(
+            'Turn is already complete'
+        );
+    });
+});
+
+describe('GameManager.playTitleTurn', () => {
+    test('works', async () => {
+        const newGame = await createInProgressGame(0);
+
+        await mgr.playTitleTurn(newGame.name, newGame.frames[0].id || '', 'New title');
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(false);
+        expect(game?.frames[0].isComplete).toEqual(true);
+        expect(game?.frames[0].title).toEqual('New title');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain("It is now Person 1's turn for game game1");
+        expect(slackBot.dms.mock.calls.length).toEqual(1);
+        expect(slackBot.dms.mock.calls[0][1]).toContain("It's your turn to play Eat Poop You Cat on game game1");
+    });
+
+    test('cleans up game when last frame played', async () => {
+        // Mock out fetch so the game title image fetching doesn't fail
+        mockFetch.mockResolvedValueOnce(new Response(undefined));
+
+        const newGame = await createInProgressGame(2, 3);
+
+        await mgr.playTitleTurn(newGame.name, newGame.frames[2].id || '', 'New title');
+
+        const game = await db.getGame(newGame.name);
+
+        expect(game?.isComplete).toEqual(true);
+        expect(game?.frames[2].isComplete).toEqual(true);
+        expect(game?.frames[2].title).toEqual('New title');
+
+        expect(slackBot.messages.mock.calls.length).toEqual(1);
+        expect(slackBot.messages.mock.calls[0][1]).toContain('Game game1 is done!');
+        expect(slackBot.dms.mock.calls.length).toEqual(0);
+    });
+
+    test("rejects when game doesn't exist", async () => {
+        await expect(mgr.playTitleTurn('InvalidGameID', 'InvalidTurnID', 'abc')).rejects.toThrowError(
+            "Game doesn't exist"
+        );
+    });
+
+    test("rejects when turn doesn't exist", async () => {
+        await expect(mgr.playTitleTurn('game1', 'InvalidTurnID', 'abc')).rejects.toThrowError("Frame doesn't exist");
+    });
+
+    test('rejects when previous turn was a title turn', async () => {
+        const newGame = await createInProgressGame(3);
+
+        await expect(mgr.playTitleTurn(newGame.name, newGame.frames[3].id, 'abc')).rejects.toThrowError(
+            'Previous turn state is inconsistent'
+        );
+    });
+
+    test('rejects when turn is completed', async () => {
+        const newGame = await createInProgressGame(2);
+
+        await expect(mgr.playTitleTurn(newGame.name, newGame.frames[0].id, 'abc')).rejects.toThrowError(
             'Turn is already complete'
         );
     });
