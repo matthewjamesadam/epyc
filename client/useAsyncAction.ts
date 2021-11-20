@@ -4,10 +4,10 @@ import { DependencyList } from 'react';
 export function useAsyncAction<Result>(
     action: () => Promise<Result>,
     initialState: boolean = false
-): [() => void, boolean, Result | null, Error | null] {
+): [() => void, boolean, Result | null, any] {
     const [isRunning, setIsRunning] = React.useState(initialState);
     const [result, setResult] = React.useState<Result | null>(null);
-    const [error, setError] = React.useState<Error | null>(null);
+    const [error, setError] = React.useState<any>(null);
 
     const execute = async () => {
         setIsRunning(true);
