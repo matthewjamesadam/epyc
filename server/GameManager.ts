@@ -261,13 +261,16 @@ export class GameManager {
         });
     }
 
+    async runLater(fn: () => Promise<void>): Promise<void> {
+        // Update avatar asynchronously after request completes
+        setTimeout(() => fn(), 1000);
+    }
+
     private async updateAvatar(person: PersonModel | undefined) {
         if (!person) {
             return;
         }
-
-        // Update avatar asynchronously after request completes
-        setTimeout(() => this.doUpdateAvatar(person), 1000);
+        await this.runLater(() => this.doUpdateAvatar(person));
     }
 
     private async doUpdateAvatar(person: PersonModel) {

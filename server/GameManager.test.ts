@@ -49,6 +49,9 @@ jest.mock('node-fetch', () =>
     })
 );
 
+// Disable console logs
+jest.spyOn(console, 'log').mockImplementation(() => {});
+
 class MockBot implements IBot {
     messages = jest.fn<any, [ChannelModel, string]>();
     dms = jest.fn<any, [PersonModel, string]>();
@@ -250,6 +253,10 @@ beforeEach(() => {
     discordBot = new MockBot();
     slackBot = new MockBot();
     mgr = new GameManager(db, discordBot, slackBot);
+
+    jest.spyOn(mgr, 'runLater').mockImplementation(async (fn: () => Promise<void>) => {
+        return fn();
+    });
 
     db.populate();
 });
