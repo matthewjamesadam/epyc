@@ -230,8 +230,8 @@ export class GameManager {
         game.frames[frameIdx] = frame;
 
         await this.db.putGame(game);
-        await this.updateAvatar(person);
         await this.onFrameDone(game, frameIdx);
+        await this.updateAvatar(person);
     }
 
     private async pipeToStream(
@@ -263,29 +263,46 @@ export class GameManager {
 
     private async updateAvatar(person: PersonModel | undefined) {
         if (!person) {
+            return;
+        }
+
+        // Update avatar asynchronously after request completes
+        setTimeout(() => this.doUpdateAvatar(person), 1000);
+    }
+
+    private async doUpdateAvatar(person: PersonModel) {
+        if (!person) {
             return; // No person to update
         }
+
+        Logger.log(`doUpdateAvatar -- updating avatar for ${person.name}`);
 
         const lastValid = spacetime().subtract(1, 'month');
 
         if (person.avatar && spacetime(person.avatar.lastUpdated).isAfter(lastValid)) {
+            Logger.log(`doUpdateAvatar -- avatar does not need to be updated`);
             return; // Nothing to update
         }
 
         const botAvatar = await this.getBotTarget(person.target).getAvatar(person);
 
         if (!botAvatar) {
+            Logger.log(`doUpdateAvatar -- no avatar from bot`);
             return; // Nothing to update
         }
 
         // Fetch avatar
         const { fd, path, cleanup } = await makeTmpFile();
         try {
+            Logger.log(`doUpdateAvatar -- fetching avatar`);
             const fileWriteStream = await fs.createWriteStream('', { fd });
             const avatarRequest = await fetch(botAvatar.url);
             if (!avatarRequest.body) {
+                Logger.log(`doUpdateAvatar -- no avatar body`);
                 return; // No avatar body?
             }
+
+            Logger.log(`doUpdateAvatar -- fetched avatar`);
 
             await this.pipeToStream(avatarRequest.body, fileWriteStream);
 
@@ -296,17 +313,21 @@ export class GameManager {
             const hash = cryptoStream.digest('hex');
 
             if (hash === person.avatar?.hash) {
+                Logger.log(`doUpdateAvatar -- avatar has same hash, not saving`);
                 return; // Same avatar as before
             }
             const fileReadStream2 = await fs.createReadStream(path);
 
+            Logger.log(`doUpdateAvatar -- uploading new avatar`);
             const { fileName, fileUrl } = await ImageStore.uploadAvatar(person.id, fileReadStream2);
+            Logger.log(`doUpdateAvatar -- uploaded new avatar`);
 
             const newAvatar = AvatarModel.create(fileUrl, botAvatar.width, botAvatar.height, hash);
 
             person.avatar = newAvatar;
 
             await this.db.putPerson(person);
+            Logger.log(`doUpdateAvatar -- done, cleaning up`);
             await cleanup();
         } catch (err) {
             // Log errors but otherwise eat them -- failing to update an avatar is fine
@@ -317,6 +338,7 @@ export class GameManager {
     }
 
     async playImageTurn(gameName: string, frameId: string, blob: Readable) {
+        Logger.log(`playImageTurn ${gameName} ${frameId}: playing image turn`);
         const { game, frameIdx, frame, parentFrame } = await this.getFrameData(gameName, frameId);
         const person = await this.db.getPerson(frame.personId);
 
@@ -328,26 +350,45 @@ export class GameManager {
             throw new Error('Previous turn state is inconsistent');
         }
 
+        Logger.log(`playImageTurn ${gameName} ${frameId}: writing stream`);
+
         const { fd, path, cleanup } = await makeTmpFile();
 
         try {
             const fileWriteStream = await fs.createWriteStream('', { fd });
             await this.pipeToStream(blob, fileWriteStream);
 
+            Logger.log(`playImageTurn ${gameName} ${frameId}: decoding image`);
+
             const { width, height } = await ImageProcessor.decodeImage(path);
+
+            Logger.log(`playImageTurn ${gameName} ${frameId}: uploading image`);
 
             const fileReadStream2 = await fs.createReadStream(path);
             const { fileName, fileUrl } = await ImageStore.uploadImage(gameName, frameId, fileReadStream2);
 
             frame.image = FrameImageModel.create(fileUrl, fileName, width, height);
 
+            Logger.log(`playImageTurn ${gameName} ${frameId}: writing new game state`);
+
             await this.db.putGame(game);
-            await this.updateAvatar(person);
+
+            Logger.log(`playImageTurn ${gameName} ${frameId}: checking game completion state`);
+
             await this.onFrameDone(game, frameIdx);
+
+            Logger.log(`playImageTurn ${gameName} ${frameId}: updating avatar`);
+
+            await this.updateAvatar(person);
+
+            Logger.log(`playImageTurn ${gameName} ${frameId}: cleaning up`);
+
             await cleanup();
         } finally {
             await this.unlink(path);
         }
+
+        Logger.log(`playImageTurn ${gameName} ${frameId}: done`);
     }
 
     private getGameUrl(game: GameModel) {
@@ -401,9 +442,19 @@ export class GameManager {
         if (frameIdx + 1 >= game.frames.length) {
             game.isComplete = true;
 
+            Logger.log(`playImageTurn ${game.name} ${frameIdx}: game is over, creating title image`);
+
             await this.createGameTitleImage(game);
+
+            Logger.log(`playImageTurn ${game.name} ${frameIdx}: game is over, writing game state`);
+
             await this.db.putGame(game);
+
+            Logger.log(`playImageTurn ${game.name} ${frameIdx}: game is over, writing to channel`);
+
             await this.sendMessage(game.channel, `Game `, Bold(game.name), ` is done!  `, this.getGameUrl(game));
+
+            Logger.log(`playImageTurn ${game.name} ${frameIdx}: game is over, done`);
         }
 
         // Game's not over yet -- tell the next player
@@ -411,7 +462,12 @@ export class GameManager {
             const nextFrame = game.frames[frameIdx + 1];
             const nextPerson = await this.db.getPerson(nextFrame.personId);
 
+            Logger.log(`playImageTurn ${game.name} ${frameIdx}: game is still going, sending DM to next person`);
+
             await this.sendFrameMessage(game, nextFrame, nextPerson);
+
+            Logger.log(`playImageTurn ${game.name} ${frameIdx}: game is still going, writing to channel`);
+
             await this.sendMessage(
                 game.channel,
                 `It is now `,
@@ -420,6 +476,8 @@ export class GameManager {
                 Bold(game.name),
                 `.`
             );
+
+            Logger.log(`playImageTurn ${game.name} ${frameIdx}: game is still going, done`);
         }
     }
 
