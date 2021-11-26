@@ -16,7 +16,9 @@ export function useAsyncAction<Result>(
             const res = await action();
             setResult(res);
         } catch (error) {
-            setError(error);
+            if (error instanceof Error) {
+                setError(error);
+            }
         } finally {
             setIsRunning(false);
         }

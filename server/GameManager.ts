@@ -297,8 +297,9 @@ export class GameManager {
         // Fetch avatar
         const { fd, path, cleanup } = await makeTmpFile();
         try {
-            Logger.log(`doUpdateAvatar -- fetching avatar`);
+            Logger.log(`doUpdateAvatar -- making temp file`);
             const fileWriteStream = await fs.createWriteStream('', { fd });
+            Logger.log(`doUpdateAvatar -- fetching avatar from URL ${botAvatar.url}`);
             const avatarRequest = await fetch(botAvatar.url);
             if (!avatarRequest.body) {
                 Logger.log(`doUpdateAvatar -- no avatar body`);
