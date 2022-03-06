@@ -18,9 +18,9 @@ import { Bot, MessageContent, Bold, GameLogicError, Block, PersonRef, MessageChu
 import { FramePlayData } from './api';
 import ImageStore from './ImageStore';
 import { ImageProcessor } from './ImageProcessor';
-import spacetime from 'spacetime';
+import dayjs from 'dayjs';
 import Cfg from './Cfg';
-import fetch from 'node-fetch';
+import { fetch, stream } from 'undici';
 import crypto from 'crypto';
 import { RandomEmoji } from './Emojis';
 
@@ -280,9 +280,9 @@ export class GameManager {
 
         Logger.log(`doUpdateAvatar -- updating avatar for ${person.name}`);
 
-        const lastValid = spacetime().subtract(1, 'month');
+        const lastValid = dayjs().subtract(1, 'month');
 
-        if (person.avatar && spacetime(person.avatar.lastUpdated).isAfter(lastValid)) {
+        if (person.avatar && dayjs(person.avatar.lastUpdated).isAfter(lastValid)) {
             Logger.log(`doUpdateAvatar -- avatar does not need to be updated`);
             return; // Nothing to update
         }
@@ -308,7 +308,7 @@ export class GameManager {
 
             Logger.log(`doUpdateAvatar -- fetched avatar`);
 
-            await this.pipeToStream(avatarRequest.body, fileWriteStream);
+            await this.pipeToStream(Readable.from(avatarRequest.body), fileWriteStream);
 
             const fileReadStream1 = await fs.createReadStream(path);
             const cryptoStream = crypto.createHash('md5');
@@ -418,7 +418,7 @@ export class GameManager {
                 return; // No avatar body?
             }
 
-            await this.pipeToStream(frameImage.body, fileWriteStream);
+            await this.pipeToStream(Readable.from(frameImage.body), fileWriteStream);
 
             const titleImageData = await ImageProcessor.makeTitleImage(path);
 

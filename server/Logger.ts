@@ -1,4 +1,4 @@
-import spacetime from 'spacetime';
+import dayjs from 'dayjs';
 
 /*
     Centralized logging.  For now this just goes to the console.
@@ -26,6 +26,6 @@ export class Logger {
     }
 
     static get timestamp(): string | object {
-        return spacetime.now().goto('America/Vancouver').format('nice');
+        return dayjs().format();
     }
 }

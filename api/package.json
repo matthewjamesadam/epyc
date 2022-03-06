@@ -5,7 +5,7 @@
     "author": "",
     "license": "MIT",
     "devDependencies": {
-        "@openapitools/openapi-generator-cli": "^2.3.10"
+        "@openapitools/openapi-generator-cli": "^2.4.26"
     },
     "scripts": {
         "generate-client-api": "export JAVA_HOME=~/Downloads/jdk-13.0.1.jdk/Contents/Home && openapi-generator-cli generate -i ./api.yaml -g typescript-fetch --additional-properties=typescriptThreePlus=true -o ../client/api",

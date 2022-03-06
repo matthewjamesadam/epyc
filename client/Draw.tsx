@@ -50,7 +50,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                 </div>
 
                 <div className="d-flex flex-wrap align-items-start">
-                    <ButtonGroup toggle size="sm" className="mr-1 mb-1">
+                    <ButtonGroup size="sm" className="me-1 mb-1">
                         {drawManager?.tools.map((tool) => {
                             return (
                                 <ToolToggleButton
@@ -61,7 +61,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                                     icon={tool.icon}
                                     checked={tool.type === drawManager?.selectedTool.type}
                                     variant="outline-dark"
-                                    onChange={() => {
+                                    onClick={() => {
                                         drawManager?.setSelectedTool(tool.type);
                                     }}
                                 />
@@ -69,7 +69,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         })}
                     </ButtonGroup>
 
-                    <ButtonGroup toggle size="sm" className="mr-1 mb-1">
+                    <ButtonGroup size="sm" className="me-1 mb-1">
                         <ToolToggleButton
                             value=""
                             tooltip="Select"
@@ -77,7 +77,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                             type="radio"
                             checked={drawManager?.selectedTool.type === ToolType.select}
                             variant="outline-dark"
-                            onChange={() => {
+                            onClick={() => {
                                 drawManager?.setSelectedTool(ToolType.select);
                             }}
                         />
@@ -100,13 +100,13 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                             checked={drawManager?.selectedTool.type === ToolType.paste}
                             variant="outline-dark"
                             disabled={drawManager?.copyData === null}
-                            onChange={() => {
+                            onClick={() => {
                                 drawManager?.setSelectedTool(ToolType.paste);
                             }}
                         />
                     </ButtonGroup>
 
-                    <ButtonGroup size="sm" className="mr-1 mb-1">
+                    <ButtonGroup size="sm" className="me-1 mb-1">
                         <ToolButton
                             tooltip="Undo"
                             icon="undo"
@@ -128,7 +128,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                         />
                     </ButtonGroup>
 
-                    <ButtonGroup toggle size="sm" className="mr-1 mb-1">
+                    <ButtonGroup size="sm" className="me-1 mb-1">
                         {lineWidths.map((lineWidth) => {
                             return (
                                 <ToolToggleButton
@@ -138,7 +138,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                                     type="radio"
                                     variant="outline-dark"
                                     checked={drawManager?.lineWidth === lineWidth}
-                                    onChange={() => {
+                                    onClick={() => {
                                         if (drawManager) drawManager.lineWidth = lineWidth;
                                     }}
                                 >
@@ -152,7 +152,7 @@ function Draw(props: { gameName: string; frameId: string; title: string; onDone:
                 </div>
 
                 <div className="mb-2 mt-2 d-flex">
-                    <div className="colour-picker mr-2">
+                    <div className="colour-picker me-2">
                         <HexColorPicker
                             color={drawManager?.strokeColour}
                             onChange={(colour) => {

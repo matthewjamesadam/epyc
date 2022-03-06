@@ -3,7 +3,7 @@ import GameList from './GameList';
 import { useAsyncActionNow } from './useAsyncAction';
 import { EpycApi, Game, GameFromJSON, GameToJSON } from './Apis';
 import { Container, Row, Col, Nav, Spinner } from 'react-bootstrap';
-import { useHistory } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 type AllGameTypes = 'random' | 'recent';
 
@@ -20,8 +20,9 @@ function EncodeGames(games: Game[]): any {
 }
 
 export default function AllGameList() {
-    const history = useHistory();
+    const navigate = useNavigate();
     const [type, setType] = React.useState<AllGameTypes>('random');
+    const location = useLocation();
 
     // This action fetches a set of random games from the service for display on the main page.  The problem is
     // that this means when you navigate back and forth, a different set of games is displayed, which feels wrong.
@@ -29,7 +30,7 @@ export default function AllGameList() {
     // reuse whenever we re-render this page.
     const [isFetchingGames, games, gamesErr] = useAsyncActionNow(async () => {
         // See if we previously stored games for this history -- if so, reuse it
-        const state: any = history.location.state;
+        const state: any = location.state;
         const decodedState = DecodeGames(state?.[type]);
 
         if (decodedState) {
@@ -42,7 +43,8 @@ export default function AllGameList() {
 
         const encodedState: any = {};
         encodedState[type] = EncodeGames(games);
-        history.replace(history.location.pathname, encodedState);
+
+        navigate(location.pathname, { replace: true, state: encodedState });
         return games;
     }, [type]);
 
@@ -55,7 +57,7 @@ export default function AllGameList() {
     );
 
     if (isFetchingGames) {
-        content = <Spinner />;
+        content = <Spinner animation="border" />;
     }
 
     return (

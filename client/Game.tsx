@@ -4,6 +4,7 @@ import { EpycApi, Frame, Game, Person } from './Apis';
 import Error404 from './Error404';
 import { useAsyncActionOnce } from './useAsyncAction';
 import { ResizingImg } from './ResizingImg';
+import { useParams } from 'react-router';
 
 function GameFrameAvatar(props: { person: Person }) {
     const avatar = props.person.avatar;
@@ -53,11 +54,12 @@ function GameFrame(props: { idx: number; frame: Frame }) {
     );
 }
 
-export default function (props: { gameName: string }) {
-    const [isFetchingGame, game, gameErr] = useAsyncActionOnce(() => EpycApi.getGame({ gameName: props.gameName }));
+export default function (props: {}) {
+    const { gameName } = useParams();
+    const [isFetchingGame, game, gameErr] = useAsyncActionOnce(() => EpycApi.getGame({ gameName: gameName || '' }));
 
     if (isFetchingGame) {
-        return <Spinner />;
+        return <Spinner animation="border" />;
     }
 
     if (gameErr || !game) {

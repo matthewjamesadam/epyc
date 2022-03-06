@@ -3,16 +3,18 @@ import GameList from './GameList';
 import { useAsyncActionOnce } from './useAsyncAction';
 import { EpycApi } from './Apis';
 import { Container, Spinner } from 'react-bootstrap';
+import { useParams } from 'react-router';
 
-export default function AllGameList(props: { channelId: string; channelTarget: string }) {
+export default function AllGameList(props: {}) {
+    const { channelId, service } = useParams();
     const [isFetchingGames, games, gamesErr] = useAsyncActionOnce(() =>
         EpycApi.getGames({
-            channelId: props.channelId,
-            channelService: props.channelTarget,
+            channelId: channelId,
+            channelService: service,
         })
     );
     return isFetchingGames ? (
-        <Spinner />
+        <Spinner animation="border" />
     ) : (
         <Container>
             <GameList games={games} />
