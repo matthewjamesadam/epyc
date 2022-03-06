@@ -3,10 +3,6 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 
 const config = {
-    experiments: {
-        asset: true,
-    },
-
     context: path.resolve(__dirname),
     entry: './App.tsx',
     output: {

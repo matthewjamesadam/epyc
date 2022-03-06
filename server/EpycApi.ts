@@ -66,7 +66,7 @@ export class EpycApi extends EpycApiBase {
         return game;
     }
 
-    private logError(error: Error) {
+    private logError(error: unknown) {
         Logger.exception(error, 'Error occurred in EPYC API implementation');
     }
 

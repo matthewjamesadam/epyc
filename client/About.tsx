@@ -61,13 +61,13 @@ export default function About() {
             <p>You can add the bot to your Slack or Discord server by clicking on one of these two links:</p>
 
             <div className="mb-4 d-flex align-items-center">
-                <Button href="/slack/install" className="mr-3 d-flex align-items-center" variant="outline-primary">
-                    <Icon type="slack" style={{ height: '1.3rem' }} fill="currentColor" className="mr-2" />
+                <Button href="/slack/install" className="me-3 d-flex align-items-center" variant="outline-primary">
+                    <Icon type="slack" style={{ height: '1.3rem' }} fill="currentColor" className="me-2" />
                     Install into Slack Workspace
                 </Button>
                 or
-                <Button href="/discord/install" className="ml-3 d-flex align-items-center" variant="outline-primary">
-                    <Icon type="discord" style={{ height: '1.3rem' }} fill="currentColor" className="mr-2" />
+                <Button href="/discord/install" className="ms-3 d-flex align-items-center" variant="outline-primary">
+                    <Icon type="discord" style={{ height: '1.3rem' }} fill="currentColor" className="me-2" />
                     Install into Discord Server
                 </Button>
             </div>

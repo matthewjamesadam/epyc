@@ -156,7 +156,7 @@ export abstract class EpycApiBase {
         const response = await this.getFramePlayData(params, context);
 
 
-        res.json(response);
+        res.json(FramePlayDataToJSON(response));
 
     }
     async handle_getGame(req: Express.Request, res: Express.Response) {
@@ -176,7 +176,7 @@ export abstract class EpycApiBase {
         const response = await this.getGame(params, context);
 
 
-        res.json(response);
+        res.json(GameToJSON(response));
 
     }
     async handle_getGames(req: Express.Request, res: Express.Response) {
@@ -218,7 +218,7 @@ export abstract class EpycApiBase {
         const response = await this.getGames(params, context);
 
 
-        res.json(response);
+        res.json(response.map(GameToJSON));
 
     }
     async handle_putFrameImage(req: Express.Request, res: Express.Response) {

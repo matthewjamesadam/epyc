@@ -1,8 +1,7 @@
 import * as React from 'react';
-import { Card, CardDeck, Container, Row, Col, Spinner } from 'react-bootstrap';
+import { Card, Row, Col } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { useAsyncActionOnce } from './useAsyncAction';
-import { EpycApi, Game } from './Apis';
+import { Game } from './Apis';
 import Error404 from './Error404';
 
 function EmptyGameCard() {
@@ -48,9 +47,9 @@ export default function GameList(props: { games: Game[] | null }) {
     if (!props.games || props.games.length === 0) return <Error404 />;
 
     return (
-        <Row>
+        <Row lg={4} md={3} sm={2} xs={1}>
             {props.games.map((game) => (
-                <Col key={game.name} lg={3} md={4} sm={6} xs={12} className="mb-5">
+                <Col key={game.name} className="mb-5">
                     <GameCard game={game} />
                 </Col>
             ))}

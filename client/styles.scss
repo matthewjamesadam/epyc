@@ -1,26 +1,23 @@
-@import 'bootstrap/scss/functions';
-@import 'bootstrap/scss/variables';
-@import 'bootstrap/scss/mixins';
-@import 'bootstrap/scss/utilities';
+// @import 'bootstrap/scss/bootstrap';
 
-@import 'node_modules/bootstrap/scss/reboot';
-@import 'node_modules/bootstrap/scss/type';
-@import 'node_modules/bootstrap/scss/grid';
+@import 'bootstrap/scss/bootstrap-utilities';
+@import 'bootstrap/scss/bootstrap-reboot';
+@import 'bootstrap/scss/bootstrap-grid';
 
-@import 'node_modules/bootstrap/scss/buttons';
-@import 'node_modules/bootstrap/scss/nav';
-@import 'node_modules/bootstrap/scss/navbar';
+@import 'bootstrap/scss/buttons';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/nav';
+@import 'bootstrap/scss/navbar';
 
-@import 'node_modules/bootstrap/scss/popover';
+@import 'bootstrap/scss/type';
 
-@import 'node_modules/bootstrap/scss/forms';
-@import 'node_modules/bootstrap/scss/card';
-@import 'node_modules/bootstrap/scss/alert';
-@import 'node_modules/bootstrap/scss/spinners';
-
-@import 'node_modules/bootstrap/scss/button-group';
-
-@import 'node_modules/bootstrap/scss/tooltip';
+@import 'bootstrap/scss/forms';
+@import 'bootstrap/scss/card';
+@import 'bootstrap/scss/alert';
+@import 'bootstrap/scss/popover';
+@import 'bootstrap/scss/spinners';
+@import 'bootstrap/scss/button-group';
+@import 'bootstrap/scss/tooltip';
 
 /*
     Horizontal layout for large screens, vertical otherwise

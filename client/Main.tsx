@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { Route, Switch, Redirect } from 'react-router';
-import { LinkContainer } from 'react-router-bootstrap';
-import { Nav, Navbar } from 'react-bootstrap';
+import { Route, Routes } from 'react-router';
+import { Container, Nav, Navbar } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { LinkContainer } from './LinkContainer';
 import Error404 from './Error404';
 import { useAsyncActionOnce } from './useAsyncAction';
 import { EpycApi } from './Apis';
@@ -21,94 +21,65 @@ export default function () {
         <div>
             {/* Navbar */}
             <Navbar variant="dark" bg="dark" className="my-3">
-                <Navbar.Brand as={Link} to="/">
-                    EPYC
-                </Navbar.Brand>
+                <Container>
+                    <Navbar.Brand as={Link} to="/">
+                        EPYC
+                    </Navbar.Brand>
 
-                <Nav variant="pills">
-                    <LinkContainer to="/" exact={true}>
-                        <Nav.Link active={false}>Games</Nav.Link>
-                    </LinkContainer>
+                    <Nav variant="pills" className="me-auto">
+                        <LinkContainer to="/">
+                            <Nav.Link active={false}>Games</Nav.Link>
+                        </LinkContainer>
 
-                    <LinkContainer to="/about" exact={true}>
-                        <Nav.Link active={false}>About</Nav.Link>
-                    </LinkContainer>
-                </Nav>
+                        <LinkContainer to="/about">
+                            <Nav.Link active={false}>About</Nav.Link>
+                        </LinkContainer>
+                    </Nav>
 
-                <Nav className="ml-auto">
-                    <Nav.Link href="https://github.com/matthewjamesadam/epyc">
-                        <Icon type="github" width="24" height="24" fill="currentColor" />
-                    </Nav.Link>
-                </Nav>
+                    <Nav>
+                        <Nav.Link href="https://github.com/matthewjamesadam/epyc">
+                            <Icon type="github" width="24" height="24" fill="currentColor" />
+                        </Nav.Link>
+                    </Nav>
+                </Container>
             </Navbar>
 
             {/* Routes */}
-            <Switch>
-                <Route path="/about" exact={true}>
-                    <About />
-                </Route>
+            <Routes>
+                <Route path="about" element={<About />} />
+                <Route path="/" element={<AllGameList />} />
+                <Route path="*" element={<Error404 />} />
 
                 {/* Route for testing the drawing UI */}
-                <Route
-                    path="/play/testdraw"
-                    render={(props) => {
-                        return <Draw gameName="" frameId="" title="Nothing" onDone={() => alert('Submit your turn')} />;
-                    }}
-                />
+                <Route path="play">
+                    {/* Route for testing the drawing UI */}
+                    <Route
+                        path="testdraw"
+                        element={
+                            <Draw gameName="" frameId="" title="Nothing" onDone={() => alert('Submit your turn')} />
+                        }
+                    />
 
-                {/* Route for testing the drawing UI */}
-                <Route
-                    path="/play/testtitle"
-                    render={(props) => {
-                        return (
+                    {/* Route for testing the title UI */}
+                    <Route
+                        path="testtitle"
+                        element={
                             <Title
                                 gameName=""
                                 frameId=""
                                 imageUrl="https://epyc-images.s3-us-west-2.amazonaws.com/hiatism/6054be49-e876-4d09-8899-43cc05733840.png"
                                 onDone={() => alert('Submit your turn')}
                             />
-                        );
-                    }}
-                />
+                        }
+                    />
 
-                <Route path="/play/:gameName/:frameId/done">
-                    <PlayDone />
+                    <Route path=":gameName/:frameId/done" element={<PlayDone />} />
+                    <Route path=":gameName/:frameId" element={<Play />} />
                 </Route>
 
-                <Route
-                    path="/play/:gameName/:frameId"
-                    render={(props) => {
-                        return <Play gameName={props.match.params.gameName} frameId={props.match.params.frameId} />;
-                    }}
-                />
-
-                <Route
-                    path="/game/:gameName"
-                    render={(props) => {
-                        return <Game gameName={props.match.params.gameName} />;
-                    }}
-                />
-
-                <Route
-                    path="/games/:service/:channelId"
-                    render={(props) => {
-                        return (
-                            <ChannelGameList
-                                channelId={props.match.params.channelId}
-                                channelTarget={props.match.params.service}
-                            />
-                        );
-                    }}
-                />
-
-                <Route path="/" exact={true}>
-                    <AllGameList />
-                </Route>
-
-                <Route path="*">
-                    <Error404 />
-                </Route>
-            </Switch>
+                <Route path="game/:gameName" element={<Game />} />
+                <Route path="/games/:service/:channelId" element={<ChannelGameList />} />
+            </Routes>
         </div>
     );
 }

@@ -30,7 +30,7 @@ function ToolButtonBase<Props>(
             delay={{ show: 250, hide: 250 }}
             overlay={
                 <Popover id="draw-popover">
-                    <Popover.Content>{props.tooltip}</Popover.Content>
+                    <Popover.Body>{props.tooltip}</Popover.Body>
                 </Popover>
             }
         >
