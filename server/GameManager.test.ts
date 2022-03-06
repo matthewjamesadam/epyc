@@ -14,11 +14,9 @@ import {
 } from './Db';
 import { GameManager } from './GameManager';
 import Utils from './Utils';
-import fetch from 'node-fetch';
-const { Response } = jest.requireActual('node-fetch');
-const fetchActual = jest.requireActual('node-fetch');
+import { fetch } from 'undici';
+const { fetch: fetchActual, Response } = jest.requireActual('undici');
 import { Readable } from 'stream';
-import { integer } from 'aws-sdk/clients/cloudfront';
 
 // Mock ImageProcessor so we don't bring in Jimp, which fails in Jest tests :(
 // If unit tests ever actually
@@ -43,11 +41,11 @@ jest.mock('./ImageStore', () => ({
 
 const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
 
-jest.mock('node-fetch', () =>
-    jest.fn(() => {
+jest.mock('undici', () => ({
+    fetch: jest.fn(() => {
         return fetchActual();
-    })
-);
+    }),
+}));
 
 // Disable console logs
 jest.spyOn(console, 'log').mockImplementation(() => {});
