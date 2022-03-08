@@ -1,3 +1,5 @@
+/* tslint:disable */
+/* eslint-disable */
 export * from './Avatar';
 export * from './Frame';
 export * from './FrameImageData';

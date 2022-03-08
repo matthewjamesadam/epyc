@@ -18,11 +18,13 @@ import {
     FrameFromJSON,
     FrameFromJSONTyped,
     FrameToJSON,
+} from './Frame';
+import {
     FrameImageData,
     FrameImageDataFromJSON,
     FrameImageDataFromJSONTyped,
     FrameImageDataToJSON,
-} from './';
+} from './FrameImageData';
 
 /**
  * 
@@ -80,5 +82,4 @@ export function GameToJSON(value?: Game | null): any {
         'titleImage': FrameImageDataToJSON(value.titleImage),
     };
 }
-
 

@@ -70,4 +70,3 @@ export function AvatarToJSON(value?: Avatar | null): any {
     };
 }
 
-

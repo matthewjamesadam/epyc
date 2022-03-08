@@ -9,13 +9,13 @@
             "request": "launch",
             "name": "Debug Server",
             "skipFiles": ["<node_internals>/**"],
-            "program": "${workspaceFolder}/server/.build/server.js",
+            "program": "${workspaceFolder}/.build/server.js",
             "preLaunchTask": "tsc: build - server/tsconfig-debug.json",
             "envFile": "${workspaceFolder}/EpycDebug.sh",
             "env": {
                 "BUILD_TYPE": "DEV"
             },
-            "outFiles": ["${workspaceFolder}/server/.build/*.js"]
+            "outFiles": ["${workspaceFolder}/.build/*.js"]
         },
 
         {
@@ -23,13 +23,13 @@
             "request": "launch",
             "name": "Debug Server against Prod",
             "skipFiles": ["<node_internals>/**"],
-            "program": "${workspaceFolder}/server/.build/server.js",
+            "program": "${workspaceFolder}/.build/server.js",
             "preLaunchTask": "tsc: build - server/tsconfig.json",
             "envFile": "${workspaceFolder}/EpycDebug.sh",
             "env": {
                 "BUILD_TYPE": "DEV-AGAINST-PROD"
             },
-            "outFiles": ["${workspaceFolder}/server/.build/*.js"]
+            "outFiles": ["${workspaceFolder}/.build/*.js"]
         },
 
         {
@@ -37,13 +37,13 @@
             "request": "launch",
             "name": "Debug notification sender",
             "skipFiles": ["<node_internals>/**"],
-            "program": "${workspaceFolder}/server/.build/sendNotifications.js",
+            "program": "${workspaceFolder}/.build/sendNotifications.js",
             "preLaunchTask": "tsc: build - server/tsconfig.json",
             "envFile": "${workspaceFolder}/EpycDebug.sh",
             "env": {
                 "BUILD_TYPE": "DEV"
             },
-            "outFiles": ["${workspaceFolder}/server/.build/*.js"]
+            "outFiles": ["${workspaceFolder}/.build/*.js"]
         },
 
         {
@@ -51,7 +51,7 @@
             "request": "launch",
             "name": "Debug Tests",
             "skipFiles": ["<node_internals>/**"],
-            "program": "${workspaceRoot}/server/node_modules/jest/bin/jest.js",
+            "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
             "args": ["--verbose", "-i", "--no-cache"],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",

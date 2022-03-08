@@ -9,6 +9,7 @@ import { DiscordBot } from './DiscordBot';
 import { GameManager, GameManagerProvider } from './GameManager';
 import { SlackBot } from './SlackBot';
 import { Logger } from './Logger';
+import Cfg from './Cfg';
 
 let startDiscord = async (gameManager: GameManagerProvider): Promise<DiscordBot> => {
     Logger.log('*** Starting Discord Bot');
@@ -41,11 +42,7 @@ let startServer = async (
 ) => {
     Logger.log('*** Starting Server');
 
-    let corsDomains = new Set<string>(['http://epyc.phlegmatic.ca', 'https://epyc.phlegmatic.ca']);
-
-    if (process.env.NODE_ENV === 'development') {
-        corsDomains = new Set<string>(['http://localhost:8080', 'http://localhost:3001']);
-    }
+    const corsDomains = new Set<string>(Cfg.corsDomains);
 
     const corsMiddleware = cors({
         origin: (origin, callback) => {

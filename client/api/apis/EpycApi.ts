@@ -61,7 +61,7 @@ export class EpycApi extends runtime.BaseAPI {
 
     /**
      */
-    async getFramePlayDataRaw(requestParameters: GetFramePlayDataRequest): Promise<runtime.ApiResponse<FramePlayData>> {
+    async getFramePlayDataRaw(requestParameters: GetFramePlayDataRequest, initOverrides?: RequestInit): Promise<runtime.ApiResponse<FramePlayData>> {
         if (requestParameters.gameName === null || requestParameters.gameName === undefined) {
             throw new runtime.RequiredError('gameName','Required parameter requestParameters.gameName was null or undefined when calling getFramePlayData.');
         }
@@ -79,21 +79,21 @@ export class EpycApi extends runtime.BaseAPI {
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        });
+        }, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => FramePlayDataFromJSON(jsonValue));
     }
 
     /**
      */
-    async getFramePlayData(requestParameters: GetFramePlayDataRequest): Promise<FramePlayData> {
-        const response = await this.getFramePlayDataRaw(requestParameters);
+    async getFramePlayData(requestParameters: GetFramePlayDataRequest, initOverrides?: RequestInit): Promise<FramePlayData> {
+        const response = await this.getFramePlayDataRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      */
-    async getGameRaw(requestParameters: GetGameRequest): Promise<runtime.ApiResponse<Game>> {
+    async getGameRaw(requestParameters: GetGameRequest, initOverrides?: RequestInit): Promise<runtime.ApiResponse<Game>> {
         if (requestParameters.gameName === null || requestParameters.gameName === undefined) {
             throw new runtime.RequiredError('gameName','Required parameter requestParameters.gameName was null or undefined when calling getGame.');
         }
@@ -107,21 +107,21 @@ export class EpycApi extends runtime.BaseAPI {
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        });
+        }, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => GameFromJSON(jsonValue));
     }
 
     /**
      */
-    async getGame(requestParameters: GetGameRequest): Promise<Game> {
-        const response = await this.getGameRaw(requestParameters);
+    async getGame(requestParameters: GetGameRequest, initOverrides?: RequestInit): Promise<Game> {
+        const response = await this.getGameRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      */
-    async getGamesRaw(requestParameters: GetGamesRequest): Promise<runtime.ApiResponse<Array<Game>>> {
+    async getGamesRaw(requestParameters: GetGamesRequest, initOverrides?: RequestInit): Promise<runtime.ApiResponse<Array<Game>>> {
         const queryParameters: any = {};
 
         if (requestParameters.channelId !== undefined) {
@@ -147,21 +147,21 @@ export class EpycApi extends runtime.BaseAPI {
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        });
+        }, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(GameFromJSON));
     }
 
     /**
      */
-    async getGames(requestParameters: GetGamesRequest): Promise<Array<Game>> {
-        const response = await this.getGamesRaw(requestParameters);
+    async getGames(requestParameters: GetGamesRequest = {}, initOverrides?: RequestInit): Promise<Array<Game>> {
+        const response = await this.getGamesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      */
-    async putFrameImageRaw(requestParameters: PutFrameImageRequest): Promise<runtime.ApiResponse<void>> {
+    async putFrameImageRaw(requestParameters: PutFrameImageRequest, initOverrides?: RequestInit): Promise<runtime.ApiResponse<void>> {
         if (requestParameters.gameName === null || requestParameters.gameName === undefined) {
             throw new runtime.RequiredError('gameName','Required parameter requestParameters.gameName was null or undefined when calling putFrameImage.');
         }
@@ -186,20 +186,20 @@ export class EpycApi extends runtime.BaseAPI {
             headers: headerParameters,
             query: queryParameters,
             body: requestParameters.body as any,
-        });
+        }, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
 
     /**
      */
-    async putFrameImage(requestParameters: PutFrameImageRequest): Promise<void> {
-        await this.putFrameImageRaw(requestParameters);
+    async putFrameImage(requestParameters: PutFrameImageRequest, initOverrides?: RequestInit): Promise<void> {
+        await this.putFrameImageRaw(requestParameters, initOverrides);
     }
 
     /**
      */
-    async putFrameTitleRaw(requestParameters: PutFrameTitleRequest): Promise<runtime.ApiResponse<void>> {
+    async putFrameTitleRaw(requestParameters: PutFrameTitleRequest, initOverrides?: RequestInit): Promise<runtime.ApiResponse<void>> {
         if (requestParameters.gameName === null || requestParameters.gameName === undefined) {
             throw new runtime.RequiredError('gameName','Required parameter requestParameters.gameName was null or undefined when calling putFrameTitle.');
         }
@@ -224,15 +224,15 @@ export class EpycApi extends runtime.BaseAPI {
             headers: headerParameters,
             query: queryParameters,
             body: FramePlayTitleRequestToJSON(requestParameters.framePlayTitleRequest),
-        });
+        }, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
 
     /**
      */
-    async putFrameTitle(requestParameters: PutFrameTitleRequest): Promise<void> {
-        await this.putFrameTitleRaw(requestParameters);
+    async putFrameTitle(requestParameters: PutFrameTitleRequest, initOverrides?: RequestInit): Promise<void> {
+        await this.putFrameTitleRaw(requestParameters, initOverrides);
     }
 
 }
