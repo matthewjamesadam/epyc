@@ -22,27 +22,26 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Install Dependencies
+        shell: bash
+        run: npm install
+
       - name: Build Server
         shell: bash
         run: |
-          cd server
-          npm install
           npm test
-          npm run build
+          npm run server-build
 
       - name: Build Client
         shell: bash
         run: |
-          cd client
-          npm install
-          npm run build
+          npm run client-build
 
       - name: Package
         shell: bash
         run: |
-          cd server
           npm prune --production
-          zip -r ../${{env.AWS_APP_NAME}}.zip .
+          zip -r ./${{env.AWS_APP_NAME}}.zip . -x ".github/*" ".vscode/*" "api/*" "client/*" "server/*" "/.git*" "/.prettier*"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -53,7 +52,6 @@ jobs:
 
       - name: Upload to S3
         run: |
-          cd server
           aws deploy push --application-name ${{ env.AWS_APP_NAME }} --s3-location s3://phlegmatic-deploy/${{env.AWS_APP_NAME}}.zip
 
       - name: Deploy to EC2
