@@ -18,7 +18,7 @@ import {
     FrameImageDataFromJSON,
     FrameImageDataFromJSONTyped,
     FrameImageDataToJSON,
-} from './';
+} from './FrameImageData';
 
 /**
  * 
@@ -68,5 +68,4 @@ export function FramePlayDataToJSON(value?: FramePlayData | null): any {
         'image': FrameImageDataToJSON(value.image),
     };
 }
-
 

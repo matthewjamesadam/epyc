@@ -18,11 +18,13 @@ import {
     FramePlayDataFromJSON,
     FramePlayDataFromJSONTyped,
     FramePlayDataToJSON,
+} from './FramePlayData';
+import {
     Person,
     PersonFromJSON,
     PersonFromJSONTyped,
     PersonToJSON,
-} from './';
+} from './Person';
 
 /**
  * 
@@ -72,5 +74,4 @@ export function FrameToJSON(value?: Frame | null): any {
         'playData': FramePlayDataToJSON(value.playData),
     };
 }
-
 

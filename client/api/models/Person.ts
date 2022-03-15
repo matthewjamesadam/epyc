@@ -18,7 +18,7 @@ import {
     AvatarFromJSON,
     AvatarFromJSONTyped,
     AvatarToJSON,
-} from './';
+} from './Avatar';
 
 /**
  * 
@@ -68,5 +68,4 @@ export function PersonToJSON(value?: Person | null): any {
         'avatar': AvatarToJSON(value.avatar),
     };
 }
-
 

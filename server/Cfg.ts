@@ -20,7 +20,7 @@ const devConfiguration: Configuration = {
     dbName: 'EpycDev',
     imageStoreAwsBucket: 'epyc-dev-images',
 
-    corsDomains: ['http://localhost:8080', 'http://localhost:3000'],
+    corsDomains: ['http://localhost:8080', 'http://localhost:8082', 'http://localhost:3001'],
 
     slackUseSocketApi: true,
 };
@@ -34,7 +34,7 @@ const devAgainstProdConfiguration: Configuration = {
     dbName: 'Epyc',
     imageStoreAwsBucket: 'epyc-images',
 
-    corsDomains: ['http://localhost:8080', 'http://localhost:3000'],
+    corsDomains: ['http://localhost:8080', 'http://localhost:8082', 'http://localhost:3001'],
 
     slackUseSocketApi: true,
 };

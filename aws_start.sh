@@ -9,5 +9,4 @@ export SLACK_CLIENT_ID=$(aws ssm get-parameters --region ca-central-1 --output t
 export SLACK_CLIENT_SECRET=$(aws ssm get-parameters --region ca-central-1 --output text --names epyc-SLACK_CLIENT_SECRET --with-decryption --query Parameters[0].Value)
 export PORT=3001
 
-cd /home/www/epyc
-pm2 start .build/server.js --name epyc
+pm2 start /home/www/epyc/.build/server.js --name epyc

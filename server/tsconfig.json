@@ -1,8 +1,9 @@
 {
     "compilerOptions": {
+        "rootDir": ".",
         "target": "es2019",
         "module": "commonjs",
-        "outDir": "./.build",
+        "outDir": "../.build",
         "sourceMap": true,
         "noImplicitAny": true,
         "experimentalDecorators": true,

@@ -3,19 +3,15 @@
     "tasks": [
         {
             "type": "npm",
-            "script": "dev",
-            "path": "client/",
+            "script": "client-dev",
             "problemMatcher": [],
-            "label": "$(debug-alt) Client",
-            "detail": "webpack serve --open --config ./webpack.config.dev.js"
+            "label": "$(debug-alt) Client"
         },
         {
             "type": "npm",
             "script": "generate-api",
-            "path": "api/",
             "problemMatcher": [],
-            "label": "$(rocket) API",
-            "detail": "npm run generate-client-api && npm run generate-server-api"
+            "label": "$(rocket) API"
         }
     ]
 }
